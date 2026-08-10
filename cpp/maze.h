@@ -4,7 +4,6 @@
 
 constexpr int MAZE_MAX_WIDTH = 32;
 constexpr int MAZE_MAX_HEIGHT = 32;
-constexpr int MAX_DOORS = 4;
 
 constexpr uint8_t CELL_OPEN = 0;
 constexpr uint8_t CELL_WALL = 1;
@@ -25,9 +24,7 @@ public:
     bool blocks_movement(int x, int y, int keys_collected) const;
     bool blocks_raycast(int x, int y, int keys_collected) const;
 
-    int door_index_at(int x, int y) const;
-    int door_count() const { return door_count_; }
-    int keys_required() const { return door_count_; }
+    int keys_required() const { return key_count_; }
 
     int start_x() const { return start_x_; }
     int start_y() const { return start_y_; }
@@ -39,9 +36,7 @@ public:
 
 private:
     uint8_t grid_[MAZE_MAX_HEIGHT][MAZE_MAX_WIDTH];
-    int door_x_[MAX_DOORS];
-    int door_y_[MAX_DOORS];
-    int door_count_;
+    int key_count_;
     int start_x_;
     int start_y_;
     float start_angle_;
