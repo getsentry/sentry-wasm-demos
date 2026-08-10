@@ -21,7 +21,6 @@ constexpr Color WALL_PALETTE[4] = {
 };
 
 constexpr float FOV = 0.66f;
-// Fog falls off over ~8–10 cells for a tighter horror-corridor read.
 constexpr float MAX_DEPTH = 9.0f;
 constexpr float FOG_STRENGTH = 0.88f;
 

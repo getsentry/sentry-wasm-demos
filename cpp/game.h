@@ -43,10 +43,13 @@ private:
     void move_with_collision(float dx, float dy);
     void update_pickups_and_win();
 
+    void update_exploration();
+
     uint8_t* pixel_buffer_;
     Maze maze_;
     Player player_;
     bool keys_down_[256];
+    bool explored_[MAZE_HEIGHT][MAZE_WIDTH];
     int keys_collected_;
     bool won_;
     int level_;

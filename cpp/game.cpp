@@ -50,6 +50,8 @@ void Game::init(int seed, int level) {
     player_.x = static_cast<float>(maze_.start_x()) + 0.5f;
     player_.y = static_cast<float>(maze_.start_y()) + 0.5f;
     player_.angle = maze_.start_angle();
+    std::memset(explored_, 0, sizeof(explored_));
+    update_exploration();
 
     render_frame();
 }
@@ -100,6 +102,27 @@ void Game::step(float dt_ms) {
     }
 
     update_pickups_and_win();
+    update_exploration();
+}
+
+void Game::update_exploration() {
+    const int min_x = static_cast<int>(std::floor(player_.x - PLAYER_RADIUS));
+    const int max_x = static_cast<int>(std::floor(player_.x + PLAYER_RADIUS));
+    const int min_y = static_cast<int>(std::floor(player_.y - PLAYER_RADIUS));
+    const int max_y = static_cast<int>(std::floor(player_.y + PLAYER_RADIUS));
+
+    for (int cy = min_y; cy <= max_y; ++cy) {
+        for (int cx = min_x; cx <= max_x; ++cx) {
+            for (int ny = cy - 1; ny <= cy + 1; ++ny) {
+                for (int nx = cx - 1; nx <= cx + 1; ++nx) {
+                    if (nx < 0 || ny < 0 || nx >= MAZE_WIDTH || ny >= MAZE_HEIGHT) {
+                        continue;
+                    }
+                    explored_[ny][nx] = true;
+                }
+            }
+        }
+    }
 }
 
 bool Game::circle_collides(float px, float py) const {
@@ -167,5 +190,5 @@ void Game::render_frame() {
     }
 
     raycast_frame(maze_, player_, keys_collected_, level_, pixel_buffer_, SCREEN_WIDTH, SCREEN_HEIGHT);
-    draw_minimap(maze_, player_, pixel_buffer_, SCREEN_WIDTH, SCREEN_HEIGHT);
+    draw_minimap(maze_, player_, explored_, pixel_buffer_, SCREEN_WIDTH, SCREEN_HEIGHT);
 }

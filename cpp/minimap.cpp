@@ -15,6 +15,10 @@ void set_pixel(uint8_t* buffer, int width, int x, int y, uint8_t r, uint8_t g, u
     buffer[idx + 3] = 255;
 }
 
+bool is_beacon_cell(uint8_t cell) {
+    return cell == CELL_EXIT || cell == CELL_KEY || cell == CELL_DOOR;
+}
+
 void cell_color(uint8_t cell, uint8_t& r, uint8_t& g, uint8_t& b) {
     switch (cell) {
     case CELL_EXIT:
@@ -50,6 +54,12 @@ void cell_color(uint8_t cell, uint8_t& r, uint8_t& g, uint8_t& b) {
     }
 }
 
+void fog_color(uint8_t& r, uint8_t& g, uint8_t& b) {
+    r = 16;
+    g = 18;
+    b = 28;
+}
+
 void fill_rect(uint8_t* buffer, int width, int x0, int y0, int w, int h, uint8_t r, uint8_t g, uint8_t b) {
     for (int y = y0; y < y0 + h; ++y) {
         for (int x = x0; x < x0 + w; ++x) {
@@ -77,6 +87,7 @@ void draw_player_marker(uint8_t* buffer, int width, int cx, int cy, float angle)
 void draw_minimap(
     const Maze& maze,
     const Player& player,
+    const bool explored[MAZE_HEIGHT][MAZE_WIDTH],
     uint8_t* rgba_buffer,
     int screen_width,
     int screen_height) {
@@ -91,7 +102,31 @@ void draw_minimap(
             uint8_t r = 0;
             uint8_t g = 0;
             uint8_t b = 0;
-            cell_color(maze.cell(gx, gy), r, g, b);
+
+            if (explored[gy][gx]) {
+                cell_color(maze.cell(gx, gy), r, g, b);
+            } else {
+                fog_color(r, g, b);
+            }
+
+            const int px0 = map_x + gx * cell_px;
+            const int py0 = map_y + gy * cell_px;
+            fill_rect(rgba_buffer, screen_width, px0, py0, cell_px, cell_px, r, g, b);
+        }
+    }
+
+    // Keys, doors, and exit stay visible through unexplored fog on the minimap only.
+    for (int gy = 0; gy < MAZE_HEIGHT; ++gy) {
+        for (int gx = 0; gx < MAZE_WIDTH; ++gx) {
+            const uint8_t cell = maze.cell(gx, gy);
+            if (!is_beacon_cell(cell)) {
+                continue;
+            }
+
+            uint8_t r = 0;
+            uint8_t g = 0;
+            uint8_t b = 0;
+            cell_color(cell, r, g, b);
 
             const int px0 = map_x + gx * cell_px;
             const int py0 = map_y + gy * cell_px;
