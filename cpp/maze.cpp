@@ -91,6 +91,40 @@ bool touches_other_open(
     return false;
 }
 
+void set_start_facing_corridor(
+    const uint8_t grid[MAZE_MAX_HEIGHT][MAZE_MAX_WIDTH],
+    int maze_w,
+    int maze_h,
+    int start_x,
+    int start_y,
+    const int path_x[],
+    const int path_y[],
+    int path_len,
+    float& start_angle) {
+    if (path_len >= 2) {
+        const int dx = path_x[1] - start_x;
+        const int dy = path_y[1] - start_y;
+        if (dx != 0 || dy != 0) {
+            start_angle = std::atan2(static_cast<float>(dy), static_cast<float>(dx));
+            return;
+        }
+    }
+
+    for (int i = 0; i < 4; ++i) {
+        const int nx = start_x + kDx[i];
+        const int ny = start_y + kDy[i];
+        if (!in_bounds(nx, ny, maze_w, maze_h)) {
+            continue;
+        }
+        const uint8_t cell = grid[ny][nx];
+        if (cell == CELL_WALL || cell == CELL_ENTRANCE) {
+            continue;
+        }
+        start_angle = std::atan2(static_cast<float>(kDy[i]), static_cast<float>(kDx[i]));
+        return;
+    }
+}
+
 int carve_main_path_to_target(
     uint8_t grid[MAZE_MAX_HEIGHT][MAZE_MAX_WIDTH],
     int maze_w,
@@ -419,6 +453,9 @@ void Maze::generate(int seed, int level) {
     grid_[exit_y][width_ - 1] = CELL_EXIT;
     grid_[height_ - 1][exit_x] = CELL_EXIT;
     grid_[height_ - 1][width_ - 1] = CELL_EXIT;
+
+    set_start_facing_corridor(
+        grid_, width_, height_, start_x_, start_y_, path_x, path_y, path_len, start_angle_);
 }
 
 uint8_t Maze::cell(int x, int y) const {
