@@ -1,5 +1,8 @@
 #pragma once
 
+#include "maze.h"
+#include "raycast.h"
+
 #include <cstdint>
 
 constexpr int SCREEN_WIDTH = 640;
@@ -11,7 +14,7 @@ public:
     ~Game();
 
     void init();
-    void step();
+    void render_frame();
 
     int width() const { return SCREEN_WIDTH; }
     int height() const { return SCREEN_HEIGHT; }
@@ -19,5 +22,6 @@ public:
 
 private:
     uint8_t* pixel_buffer_;
-    int frame_;
+    Maze maze_;
+    Player player_;
 };

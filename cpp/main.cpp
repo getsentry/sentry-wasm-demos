@@ -12,8 +12,8 @@ void init_game() {
     game.init();
 }
 
-void step_game() {
-    game.step();
+void render_frame() {
+    game.render_frame();
 }
 
 int get_width() {

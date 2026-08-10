@@ -13,7 +13,7 @@ function drawFrame() {
     return;
   }
 
-  module._step_game();
+  module._render_frame();
 
   const width = module._get_width();
   const height = module._get_height();
@@ -56,7 +56,7 @@ async function start() {
     canvas.width = width;
     canvas.height = height;
 
-    status.textContent = `Running ${width}×${height} — stub renderer active`;
+    status.textContent = `Running ${width}×${height} — raycaster active (static camera)`;
     running = true;
     requestAnimationFrame(loop);
   } catch (err) {

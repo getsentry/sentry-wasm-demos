@@ -5,7 +5,11 @@
 constexpr int MAZE_WIDTH = 16;
 constexpr int MAZE_HEIGHT = 16;
 
-// Cell values: 0 = open, 1 = wall
+// Open spawn cell carved by generate(); player starts at its center.
+constexpr int MAZE_START_X = 1;
+constexpr int MAZE_START_Y = 1;
+
+// Cell values: 0 = open, >= 1 = wall (blocks rays; movement logic may differ later).
 class Maze {
 public:
     Maze();
