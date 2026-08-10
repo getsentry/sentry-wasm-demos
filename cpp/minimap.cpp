@@ -16,48 +16,43 @@ void set_pixel(uint8_t* buffer, int width, int x, int y, uint8_t r, uint8_t g, u
 }
 
 bool is_beacon_cell(uint8_t cell) {
-    return cell == CELL_EXIT || cell == CELL_KEY || cell == CELL_DOOR;
+    return cell == CELL_EXIT || cell == CELL_KEY;
 }
 
 void cell_color(uint8_t cell, uint8_t& r, uint8_t& g, uint8_t& b) {
     switch (cell) {
     case CELL_EXIT:
-        r = 255;
-        g = 220;
-        b = 40;
+        r = 253;
+        g = 184;
+        b = 27;
         break;
     case CELL_KEY:
-        r = 0;
+        r = 62;
         g = 220;
-        b = 220;
-        break;
-    case CELL_DOOR:
-        r = 220;
-        g = 0;
-        b = 220;
+        b = 255;
         break;
     case CELL_ENTRANCE:
-        r = 180;
-        g = 255;
-        b = 180;
+        r = 146;
+        g = 221;
+        b = 0;
         break;
     case CELL_WALL:
-        r = 110;
-        g = 110;
-        b = 115;
+        r = 78;
+        g = 42;
+        b = 154;
         break;
     default:
         r = 24;
-        g = 24;
-        b = 28;
+        g = 18;
+        b = 37;
         break;
     }
 }
 
 void fog_color(uint8_t& r, uint8_t& g, uint8_t& b) {
-    r = 16;
-    g = 18;
-    b = 28;
+    r = 14;
+    g = 10;
+    b = 22;
 }
 
 void fill_rect(uint8_t* buffer, int width, int x0, int y0, int w, int h, uint8_t r, uint8_t g, uint8_t b) {
@@ -72,14 +67,14 @@ void draw_player_marker(uint8_t* buffer, int width, int cx, int cy, float angle)
     for (int dy = -2; dy <= 2; ++dy) {
         for (int dx = -2; dx <= 2; ++dx) {
             if (dx * dx + dy * dy <= 5) {
-                set_pixel(buffer, width, cx + dx, cy + dy, 40, 230, 90);
+                set_pixel(buffer, width, cx + dx, cy + dy, 255, 69, 168);
             }
         }
     }
 
     const int tip_x = cx + static_cast<int>(std::cos(angle) * 6.0f);
     const int tip_y = cy + static_cast<int>(std::sin(angle) * 6.0f);
-    set_pixel(buffer, width, tip_x, tip_y, 180, 255, 180);
+    set_pixel(buffer, width, tip_x, tip_y, 253, 184, 27);
 }
 
 } // namespace
@@ -97,7 +92,7 @@ void draw_minimap(
     const int maze_h = maze.height();
     const int cell_px = MINIMAP_SIZE / maze_w;
 
-    fill_rect(rgba_buffer, screen_width, map_x - 2, map_y - 2, MINIMAP_SIZE + 4, MINIMAP_SIZE + 4, 8, 8, 12);
+    fill_rect(rgba_buffer, screen_width, map_x - 2, map_y - 2, MINIMAP_SIZE + 4, MINIMAP_SIZE + 4, 24, 18, 37);
 
     for (int gy = 0; gy < maze_h; ++gy) {
         for (int gx = 0; gx < maze_w; ++gx) {
@@ -117,7 +112,7 @@ void draw_minimap(
         }
     }
 
-    // Keys, doors, and exit stay visible through unexplored fog on the minimap only.
+    // Keys and exit stay visible through unexplored fog on the minimap only.
     for (int gy = 0; gy < maze_h; ++gy) {
         for (int gx = 0; gx < maze_w; ++gx) {
             const uint8_t cell = maze.cell(gx, gy);

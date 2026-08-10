@@ -74,7 +74,7 @@ function updateHud() {
   const keys = module._player_key_count();
   const needed = module._keys_required();
   const keyLine = `Keys: ${keys}/${needed}`;
-  hud.textContent = `Level ${currentLevel} · WASD move, arrows turn · ${keyLine} · exit gap on east wall`;
+  hud.textContent = `Level ${currentLevel} · WASD move, arrows turn · ${keyLine} · exit at bottom-right`;
 }
 
 function drawFrame() {

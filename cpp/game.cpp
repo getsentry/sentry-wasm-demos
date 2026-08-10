@@ -179,7 +179,7 @@ void Game::update_pickups_and_win() {
         maze_.set_cell(cell_x, cell_y, CELL_OPEN);
     }
 
-    if (c == CELL_EXIT) {
+    if (c == CELL_EXIT && keys_collected_ >= maze_.keys_required()) {
         won_ = true;
     }
 }
