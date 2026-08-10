@@ -9,9 +9,15 @@
   <body>
     <main>
       <h1>Raycaster Maze</h1>
-      <p id="hud">WASD move, arrows turn — find exit</p>
+      <p id="hud">WASD move, arrows turn — exit is yellow on minimap</p>
       <div class="canvas-wrap">
         <canvas id="screen" width="640" height="480"></canvas>
+        <div id="win-overlay" class="overlay hidden" aria-hidden="true">
+          <p class="overlay-title">Escaped!</p>
+        </div>
+      </div>
+      <div class="controls">
+        <button id="regenerate" type="button">Regenerate maze</button>
       </div>
       <p id="status">Loading WASM module…</p>
     </main>

@@ -1,6 +1,6 @@
 EMCC ?= emcc
 
-SRC = cpp/main.cpp cpp/maze.cpp cpp/raycast.cpp cpp/game.cpp
+SRC = cpp/main.cpp cpp/maze.cpp cpp/raycast.cpp cpp/game.cpp cpp/minimap.cpp
 OUT_JS = web/maze.js
 OUT_WASM = web/maze.wasm
 

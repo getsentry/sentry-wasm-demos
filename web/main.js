@@ -3,6 +3,8 @@ const createMazeModule = globalThis.createMazeModule;
 const canvas = document.getElementById('screen');
 const status = document.getElementById('status');
 const hud = document.getElementById('hud');
+const winOverlay = document.getElementById('win-overlay');
+const regenerateButton = document.getElementById('regenerate');
 const ctx = canvas.getContext('2d');
 
 const Key = {
@@ -32,19 +34,40 @@ let imageData = null;
 let running = false;
 let lastTime = 0;
 
+function randomSeed() {
+  return (Math.random() * 0x7fffffff) | 0;
+}
+
+function clearKeyState() {
+  for (const keyCode of TRACKED_KEYS) {
+    module._handle_key(keyCode, 0);
+  }
+}
+
+function initGame(seed) {
+  clearKeyState();
+  module._init_game(seed);
+  winOverlay.classList.add('hidden');
+  winOverlay.setAttribute('aria-hidden', 'true');
+  lastTime = 0;
+  updateHud();
+}
+
 function updateHud() {
   if (!module) {
     return;
   }
 
   if (module._game_won()) {
-    hud.textContent = 'You found the exit!';
-    status.textContent = 'Victory — refresh to play again';
+    winOverlay.classList.remove('hidden');
+    winOverlay.setAttribute('aria-hidden', 'false');
+    hud.textContent = 'You reached the exit';
+    status.textContent = 'Press Regenerate maze to play again';
     return;
   }
 
   const keyLine = module._player_has_key() ? 'Key: yes' : 'Key: no';
-  hud.textContent = `WASD move, arrows turn — find exit · ${keyLine}`;
+  hud.textContent = `WASD move, arrows turn — exit is yellow on minimap · ${keyLine}`;
 }
 
 function drawFrame() {
@@ -110,7 +133,7 @@ async function start() {
     }
 
     module = await createMazeModule();
-    module._init_game(Date.now() | 0);
+    initGame(randomSeed());
 
     const width = module._get_width();
     const height = module._get_height();
@@ -122,6 +145,7 @@ async function start() {
 
     window.addEventListener('keydown', (event) => onKeyChange(event, true));
     window.addEventListener('keyup', (event) => onKeyChange(event, false));
+    regenerateButton.addEventListener('click', () => initGame(randomSeed()));
 
     requestAnimationFrame(loop);
   } catch (err) {

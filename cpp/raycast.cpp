@@ -21,7 +21,9 @@ constexpr Color WALL_PALETTE[4] = {
 };
 
 constexpr float FOV = 0.66f;
-constexpr float MAX_DEPTH = 16.0f;
+// Fog falls off over ~8–10 cells for a tighter horror-corridor read.
+constexpr float MAX_DEPTH = 9.0f;
+constexpr float FOG_STRENGTH = 0.88f;
 
 void set_pixel(uint8_t* buffer, int width, int x, int y, uint8_t r, uint8_t g, uint8_t b) {
     const int idx = (y * width + x) * 4;
@@ -40,7 +42,7 @@ void apply_distance_fog(uint8_t& r, uint8_t& g, uint8_t& b, float distance) {
     if (fog > 1.0f) {
         fog = 1.0f;
     }
-    const float keep = 1.0f - fog * 0.78f;
+    const float keep = 1.0f - fog * FOG_STRENGTH;
     r = static_cast<uint8_t>(r * keep);
     g = static_cast<uint8_t>(g * keep);
     b = static_cast<uint8_t>(b * keep);
@@ -49,12 +51,12 @@ void apply_distance_fog(uint8_t& r, uint8_t& g, uint8_t& b, float distance) {
 void draw_ceiling_and_floor(uint8_t* buffer, int width, int height) {
     const int horizon = height / 2;
 
-    // Top half: dark blue ceiling (lighter toward the horizon).
+    // Top half: very dark ceiling — horror-corridor mood.
     for (int y = 0; y < horizon; ++y) {
         const float t = static_cast<float>(y) / static_cast<float>(horizon);
-        const uint8_t r = lerp_byte(6, 18, t);
-        const uint8_t g = lerp_byte(10, 36, t);
-        const uint8_t b = lerp_byte(28, 72, t);
+        const uint8_t r = lerp_byte(3, 10, t);
+        const uint8_t g = lerp_byte(5, 14, t);
+        const uint8_t b = lerp_byte(12, 32, t);
         for (int x = 0; x < width; ++x) {
             set_pixel(buffer, width, x, y, r, g, b);
         }
@@ -63,9 +65,9 @@ void draw_ceiling_and_floor(uint8_t* buffer, int width, int height) {
     // Bottom half: dark grey/brown floor (darker toward the bottom).
     for (int y = horizon; y < height; ++y) {
         const float t = static_cast<float>(y - horizon) / static_cast<float>(height - horizon);
-        const uint8_t r = lerp_byte(42, 14, t);
-        const uint8_t g = lerp_byte(36, 12, t);
-        const uint8_t b = lerp_byte(30, 10, t);
+        const uint8_t r = lerp_byte(28, 8, t);
+        const uint8_t g = lerp_byte(22, 7, t);
+        const uint8_t b = lerp_byte(18, 6, t);
         for (int x = 0; x < width; ++x) {
             set_pixel(buffer, width, x, y, r, g, b);
         }
@@ -164,6 +166,14 @@ void raycast_frame(const Maze& maze, const Player& player, bool has_key, uint8_t
         uint8_t r = WALL_PALETTE[palette_idx].r;
         uint8_t g = WALL_PALETTE[palette_idx].g;
         uint8_t b = WALL_PALETTE[palette_idx].b;
+
+        // Y-facing walls catch less "light" — adds depth without textures.
+        if (side == 1) {
+            r = static_cast<uint8_t>(r * 0.72f);
+            g = static_cast<uint8_t>(g * 0.72f);
+            b = static_cast<uint8_t>(b * 0.72f);
+        }
+
         apply_distance_fog(r, g, b, perp_wall_dist);
 
         for (int y = draw_start; y <= draw_end; ++y) {

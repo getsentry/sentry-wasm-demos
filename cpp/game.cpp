@@ -1,5 +1,7 @@
 #include "game.h"
 
+#include "minimap.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -137,8 +139,8 @@ void Game::move_with_collision(float dx, float dy) {
 }
 
 void Game::update_pickups_and_win() {
-    const int cell_x = static_cast<int>(player_.x);
-    const int cell_y = static_cast<int>(player_.y);
+    const int cell_x = static_cast<int>(std::floor(player_.x));
+    const int cell_y = static_cast<int>(std::floor(player_.y));
     const uint8_t c = maze_.cell(cell_x, cell_y);
 
     if (c == CELL_KEY) {
@@ -157,4 +159,5 @@ void Game::render_frame() {
     }
 
     raycast_frame(maze_, player_, has_key_, pixel_buffer_, SCREEN_WIDTH, SCREEN_HEIGHT);
+    draw_minimap(maze_, player_, has_key_, pixel_buffer_, SCREEN_WIDTH, SCREEN_HEIGHT);
 }

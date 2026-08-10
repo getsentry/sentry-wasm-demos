@@ -28,10 +28,10 @@ void Maze::generate(int seed) {
     grid_[4][7] = CELL_DOOR;
     grid_[4][5] = CELL_KEY;
 
-    // Exit chamber in the far corner (seed reserved for future layout variation).
-    grid_[12][12] = CELL_EXIT;
-    grid_[12][13] = CELL_OPEN;
-    grid_[13][12] = CELL_OPEN;
+    // Escape hatch on the southeast margin (inner row/col before the outer wall).
+    grid_[13][14] = CELL_OPEN;
+    grid_[14][13] = CELL_OPEN;
+    grid_[14][14] = CELL_EXIT;
 
     (void)seed;
 }

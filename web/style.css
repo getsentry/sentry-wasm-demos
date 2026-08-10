@@ -6,7 +6,7 @@ body {
   margin: 0;
   min-height: 100vh;
   font-family: system-ui, -apple-system, sans-serif;
-  background: #111;
+  background: #0a0a0c;
   color: #eee;
   display: flex;
   justify-content: center;
@@ -26,20 +26,64 @@ h1 {
 
 #hud {
   margin: 0 0 0.75rem;
-  color: #ccc;
+  color: #bbb;
   font-size: 0.95rem;
 }
 
 .canvas-wrap {
+  position: relative;
   display: inline-block;
 }
 
 #screen {
   display: block;
   margin: 0 auto;
-  border: 1px solid #333;
+  border: 1px solid #2a2a32;
   image-rendering: pixelated;
   background: #000;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  pointer-events: none;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.overlay-title {
+  margin: 0;
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #ffe566;
+  text-shadow: 0 0 24px rgba(255, 229, 102, 0.45);
+}
+
+.controls {
+  margin-top: 0.75rem;
+}
+
+#regenerate {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background: #1a1a22;
+  color: #ddd;
+  font: inherit;
+  cursor: pointer;
+}
+
+#regenerate:hover {
+  background: #252530;
+  border-color: #666;
 }
 
 #status {
