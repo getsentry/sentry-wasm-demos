@@ -5,6 +5,7 @@ const status = document.getElementById('status');
 const hud = document.getElementById('hud');
 const winOverlay = document.getElementById('win-overlay');
 const regenerateButton = document.getElementById('regenerate');
+const nextLevelButton = document.getElementById('next-level');
 const ctx = canvas.getContext('2d');
 
 const Key = {
@@ -33,6 +34,7 @@ let module = null;
 let imageData = null;
 let running = false;
 let lastTime = 0;
+let level = 1;
 
 function randomSeed() {
   return (Math.random() * 0x7fffffff) | 0;
@@ -44,9 +46,10 @@ function clearKeyState() {
   }
 }
 
-function initGame(seed) {
+function initGame(seed, nextLevel = level) {
   clearKeyState();
-  module._init_game(seed);
+  level = nextLevel;
+  module._init_game(seed, level);
   winOverlay.classList.add('hidden');
   winOverlay.setAttribute('aria-hidden', 'true');
   lastTime = 0;
@@ -58,16 +61,20 @@ function updateHud() {
     return;
   }
 
+  const currentLevel = module._get_level();
+
   if (module._game_won()) {
     winOverlay.classList.remove('hidden');
     winOverlay.setAttribute('aria-hidden', 'false');
-    hud.textContent = 'You reached the exit';
-    status.textContent = 'Press Regenerate maze to play again';
+    hud.textContent = `Level ${currentLevel} cleared`;
+    status.textContent = 'Next level or regenerate for a new layout';
     return;
   }
 
-  const keyLine = module._player_has_key() ? 'Key: yes' : 'Key: no';
-  hud.textContent = `WASD move, arrows turn — exit is yellow on minimap · ${keyLine}`;
+  const keys = module._player_key_count();
+  const needed = module._keys_required();
+  const keyLine = `Keys: ${keys}/${needed}`;
+  hud.textContent = `Level ${currentLevel} · WASD move, arrows turn · ${keyLine} · exit gap on east wall`;
 }
 
 function drawFrame() {
@@ -133,7 +140,7 @@ async function start() {
     }
 
     module = await createMazeModule();
-    initGame(randomSeed());
+    initGame(randomSeed(), 1);
 
     const width = module._get_width();
     const height = module._get_height();
@@ -145,7 +152,8 @@ async function start() {
 
     window.addEventListener('keydown', (event) => onKeyChange(event, true));
     window.addEventListener('keyup', (event) => onKeyChange(event, false));
-    regenerateButton.addEventListener('click', () => initGame(randomSeed()));
+    regenerateButton.addEventListener('click', () => initGame(randomSeed(), level));
+    nextLevelButton.addEventListener('click', () => initGame(randomSeed(), level + 1));
 
     requestAnimationFrame(loop);
   } catch (err) {

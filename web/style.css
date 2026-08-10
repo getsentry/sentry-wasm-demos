@@ -58,13 +58,32 @@ h1 {
   display: none;
 }
 
+.overlay-panel {
+  text-align: center;
+}
+
 .overlay-title {
-  margin: 0;
+  margin: 0 0 1rem;
   font-size: 2.5rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   color: #ffe566;
   text-shadow: 0 0 24px rgba(255, 229, 102, 0.45);
+}
+
+#next-level {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid #665;
+  border-radius: 4px;
+  background: #252530;
+  color: #ffe566;
+  font: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+#next-level:hover {
+  background: #333340;
 }
 
 .controls {

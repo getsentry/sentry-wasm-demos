@@ -24,13 +24,15 @@ public:
     Game();
     ~Game();
 
-    void init(int seed);
+    void init(int seed, int level);
     void handle_key(int key_code, bool down);
     void step(float dt_ms);
     void render_frame();
 
-    bool has_key() const { return has_key_; }
+    int keys_collected() const { return keys_collected_; }
+    int keys_required() const { return maze_.keys_required(); }
     bool won() const { return won_; }
+    int level() const { return level_; }
 
     int width() const { return SCREEN_WIDTH; }
     int height() const { return SCREEN_HEIGHT; }
@@ -45,6 +47,7 @@ private:
     Maze maze_;
     Player player_;
     bool keys_down_[256];
-    bool has_key_;
+    int keys_collected_;
     bool won_;
+    int level_;
 };

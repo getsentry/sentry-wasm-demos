@@ -9,11 +9,14 @@
   <body>
     <main>
       <h1>Raycaster Maze</h1>
-      <p id="hud">WASD move, arrows turn — exit is yellow on minimap</p>
+      <p id="hud">WASD move, arrows turn — find the east exit gap</p>
       <div class="canvas-wrap">
         <canvas id="screen" width="640" height="480"></canvas>
         <div id="win-overlay" class="overlay hidden" aria-hidden="true">
-          <p class="overlay-title">Escaped!</p>
+          <div class="overlay-panel">
+            <p class="overlay-title">Escaped!</p>
+            <button id="next-level" type="button">Next level</button>
+          </div>
         </div>
       </div>
       <div class="controls">

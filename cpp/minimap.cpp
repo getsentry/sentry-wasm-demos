@@ -15,7 +15,7 @@ void set_pixel(uint8_t* buffer, int width, int x, int y, uint8_t r, uint8_t g, u
     buffer[idx + 3] = 255;
 }
 
-void cell_color(uint8_t cell, bool /*has_key*/, uint8_t& r, uint8_t& g, uint8_t& b) {
+void cell_color(uint8_t cell, uint8_t& r, uint8_t& g, uint8_t& b) {
     switch (cell) {
     case CELL_EXIT:
         r = 255;
@@ -31,6 +31,11 @@ void cell_color(uint8_t cell, bool /*has_key*/, uint8_t& r, uint8_t& g, uint8_t&
         r = 220;
         g = 0;
         b = 220;
+        break;
+    case CELL_ENTRANCE:
+        r = 180;
+        g = 255;
+        b = 180;
         break;
     case CELL_WALL:
         r = 110;
@@ -72,7 +77,6 @@ void draw_player_marker(uint8_t* buffer, int width, int cx, int cy, float angle)
 void draw_minimap(
     const Maze& maze,
     const Player& player,
-    bool has_key,
     uint8_t* rgba_buffer,
     int screen_width,
     int screen_height) {
@@ -87,7 +91,7 @@ void draw_minimap(
             uint8_t r = 0;
             uint8_t g = 0;
             uint8_t b = 0;
-            cell_color(maze.cell(gx, gy), has_key, r, g, b);
+            cell_color(maze.cell(gx, gy), r, g, b);
 
             const int px0 = map_x + gx * cell_px;
             const int py0 = map_y + gy * cell_px;

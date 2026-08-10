@@ -37,8 +37,8 @@ uint8_t lerp_byte(uint8_t from, uint8_t to, float t) {
     return static_cast<uint8_t>(from + (to - from) * t);
 }
 
-void apply_distance_fog(uint8_t& r, uint8_t& g, uint8_t& b, float distance) {
-    float fog = distance / MAX_DEPTH;
+void apply_distance_fog(uint8_t& r, uint8_t& g, uint8_t& b, float distance, float max_depth) {
+    float fog = distance / max_depth;
     if (fog > 1.0f) {
         fog = 1.0f;
     }
@@ -76,7 +76,15 @@ void draw_ceiling_and_floor(uint8_t* buffer, int width, int height) {
 
 } // namespace
 
-void raycast_frame(const Maze& maze, const Player& player, bool has_key, uint8_t* rgba_buffer, int width, int height) {
+void raycast_frame(
+    const Maze& maze,
+    const Player& player,
+    int keys_collected,
+    int level,
+    uint8_t* rgba_buffer,
+    int width,
+    int height) {
+    const float max_depth = std::max(5.0f, MAX_DEPTH - static_cast<float>(level - 1) * 0.55f);
     draw_ceiling_and_floor(rgba_buffer, width, height);
 
     // View direction and a vector perpendicular to it that spans the screen (camera plane).
@@ -136,7 +144,7 @@ void raycast_frame(const Maze& maze, const Player& player, bool has_key, uint8_t
                 side = 1;
             }
 
-            if (maze.blocks_raycast(map_x, map_y, has_key)) {
+            if (maze.blocks_raycast(map_x, map_y, keys_collected)) {
                 hit = true;
             }
         }
@@ -174,7 +182,7 @@ void raycast_frame(const Maze& maze, const Player& player, bool has_key, uint8_t
             b = static_cast<uint8_t>(b * 0.72f);
         }
 
-        apply_distance_fog(r, g, b, perp_wall_dist);
+        apply_distance_fog(r, g, b, perp_wall_dist, max_depth);
 
         for (int y = draw_start; y <= draw_end; ++y) {
             set_pixel(rgba_buffer, width, column, y, r, g, b);

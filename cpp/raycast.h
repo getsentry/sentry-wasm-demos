@@ -11,7 +11,8 @@ struct Player {
 void raycast_frame(
     const Maze& maze,
     const Player& player,
-    bool has_key,
+    int keys_collected,
+    int level,
     uint8_t* rgba_buffer,
     int width,
     int height);

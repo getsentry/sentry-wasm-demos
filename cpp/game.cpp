@@ -14,7 +14,14 @@ constexpr float ROT_SPEED = 2.2f;
 constexpr float PLAYER_RADIUS = 0.2f;
 } // namespace
 
-Game::Game() : pixel_buffer_(nullptr), maze_(), player_{}, keys_down_{}, has_key_(false), won_(false) {
+Game::Game()
+    : pixel_buffer_(nullptr),
+      maze_(),
+      player_{},
+      keys_down_{},
+      keys_collected_(0),
+      won_(false),
+      level_(1) {
     std::memset(keys_down_, 0, sizeof(keys_down_));
 }
 
@@ -25,7 +32,7 @@ Game::~Game() {
     }
 }
 
-void Game::init(int seed) {
+void Game::init(int seed, int level) {
     if (pixel_buffer_ == nullptr) {
         pixel_buffer_ = static_cast<uint8_t*>(std::malloc(PIXEL_COUNT));
     }
@@ -35,13 +42,14 @@ void Game::init(int seed) {
     }
 
     std::memset(keys_down_, 0, sizeof(keys_down_));
-    has_key_ = false;
+    keys_collected_ = 0;
     won_ = false;
+    level_ = level < 1 ? 1 : level;
 
-    maze_.generate(seed);
-    player_.x = static_cast<float>(MAZE_START_X) + 0.5f;
-    player_.y = static_cast<float>(MAZE_START_Y) + 0.5f;
-    player_.angle = 0.0f;
+    maze_.generate(seed, level_);
+    player_.x = static_cast<float>(maze_.start_x()) + 0.5f;
+    player_.y = static_cast<float>(maze_.start_y()) + 0.5f;
+    player_.angle = maze_.start_angle();
 
     render_frame();
 }
@@ -102,7 +110,7 @@ bool Game::circle_collides(float px, float py) const {
 
     for (int cy = min_y; cy <= max_y; ++cy) {
         for (int cx = min_x; cx <= max_x; ++cx) {
-            if (!maze_.blocks_movement(cx, cy, has_key_)) {
+            if (!maze_.blocks_movement(cx, cy, keys_collected_)) {
                 continue;
             }
 
@@ -144,7 +152,7 @@ void Game::update_pickups_and_win() {
     const uint8_t c = maze_.cell(cell_x, cell_y);
 
     if (c == CELL_KEY) {
-        has_key_ = true;
+        ++keys_collected_;
         maze_.set_cell(cell_x, cell_y, CELL_OPEN);
     }
 
@@ -158,6 +166,6 @@ void Game::render_frame() {
         return;
     }
 
-    raycast_frame(maze_, player_, has_key_, pixel_buffer_, SCREEN_WIDTH, SCREEN_HEIGHT);
-    draw_minimap(maze_, player_, has_key_, pixel_buffer_, SCREEN_WIDTH, SCREEN_HEIGHT);
+    raycast_frame(maze_, player_, keys_collected_, level_, pixel_buffer_, SCREEN_WIDTH, SCREEN_HEIGHT);
+    draw_minimap(maze_, player_, pixel_buffer_, SCREEN_WIDTH, SCREEN_HEIGHT);
 }
