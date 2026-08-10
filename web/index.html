@@ -23,8 +23,18 @@
         <button id="regenerate" type="button">Regenerate maze</button>
       </div>
       <p id="status">Loading WASM module…</p>
+
+      <section class="sentry-panel" aria-labelledby="sentry-panel-title">
+        <h2 id="sentry-panel-title">Sentry tests</h2>
+        <p class="sentry-help">JS error vs wasm <code>abort()</code></p>
+        <div class="sentry-buttons">
+          <button id="report-js-error" type="button">Report test error</button>
+          <button id="trigger-wasm-crash" type="button">Trigger WASM crash</button>
+        </div>
+        <p id="sentry-feedback" class="sentry-feedback" aria-live="polite"></p>
+      </section>
     </main>
     <script src="maze.js"></script>
-    <script type="module" src="main.js"></script>
+    <script type="module" src="app.js"></script>
   </body>
 </html>

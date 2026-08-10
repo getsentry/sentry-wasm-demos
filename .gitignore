@@ -1,4 +1,9 @@
 web/maze.js
 web/maze.wasm
+web/node_modules/
+web/app.js
+web/app.js.map
+web/.env
+web/package-lock.json
 *.o
 *.d

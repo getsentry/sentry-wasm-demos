@@ -1,76 +1,76 @@
 # Raycaster Maze (Emscripten)
 
-C++17 raycaster → WebAssembly. JavaScript draws the pixel buffer on a `<canvas>`.
+C++17 raycaster → WebAssembly. JavaScript draws the pixel buffer on a `<canvas>`. Integrated with `@sentry/browser` + `@sentry/wasm`.
 
 ## Build & run
 
 ```bash
 source /path/to/emsdk/emsdk_env.sh
 make
+cd web && npm install && npm run build:js && cd ..
 python3 -m http.server 8080
 ```
 
 Open [http://localhost:8080/web/](http://localhost:8080/web/). Hard-refresh after rebuilds.
 
-Build uses `-g`, `-O2`, `-Wl,--build-id` (needed for Sentry symbolication).
+### Sentry DSN (not in HTML)
 
-## Files (what each one is)
+DSN is **not** in `index.html`. Configure locally, then rebuild JS:
+
+```bash
+cd web
+cp .env.example .env   # add your DSN
+npm run build:js
+```
+
+`web/.env` and `web/app.js` are gitignored. Rebuild after changing the DSN.
+
+Note: browser SDKs must embed the DSN in the bundle at build time — it is not a secret key, but this keeps it out of the repo and the page source.
+
+C++ build uses `-g`, `-O2`, `-Wl,--build-id`. See [docs/sentry-wasm-prep.md](docs/sentry-wasm-prep.md) for non-obvious wasm requirements.
+
+## Files
 
 | File | Role |
 | --- | --- |
 | `cpp/*.cpp` | Game in C++ |
-| `cpp/main.cpp` | Functions exported to JS (`init_game`, `step_game`, …) |
-| `web/maze.wasm` | Compiled game (binary) |
+| `cpp/main.cpp` | Exported functions incl. `trigger_test_crash()` |
+| `web/maze.wasm` | Compiled game |
 | `web/maze.js` | Emscripten glue (generated — don't edit) |
-| `web/main.js` | Loads wasm + runs the game loop |
+| `web/sentry-init.js` | `Sentry.init` + `wasmIntegration()` |
+| `web/bootstrap.js` | Imports sentry-init **then** main (init order) |
+| `web/main.js` | Wasm load + game loop + test buttons |
+| `web/build-js.mjs` | Bundles JS; reads `SENTRY_DSN` from `web/.env` |
+| `web/app.js` | Bundled output (`npm run build:js`, gitignored) — served by browser |
 
-## How the page loads (simple)
+## Load order
 
 ```
 index.html
-  ├── maze.js          adds createMazeModule() to the page
-  └── main.js
-        ├── loadWasm()           fetch maze.wasm → instantiateStreaming
-        └── game loop            mod._step_game / _render_frame → canvas
+  maze.js
+  app.js  (bundle)
+    bootstrap.js
+      sentry-init.js   ← patches instantiateStreaming, Sentry.init
+      main.js          ← loadWasm() → game
 ```
 
-## WASM + Sentry — what works / what doesn't
+## Sentry / wasmIntegration
 
-**Goal:** when wasm crashes, Sentry shows a readable stack trace (function names, not just `0x1234`).
+**What `wasmIntegration()` does:**
 
-| | |
+1. **`patchWebAssembly()`** — wraps `WebAssembly.instantiateStreaming`. When `maze.wasm` loads, calls `registerModule(module, response.url)`.
+2. **`registerModule()`** (`@sentry/wasm` `registry.ts`) — reads `build_id` from wasm (Makefile `-Wl,--build-id`). Stores debug image with `code_file` = wasm URL. **Returns `null` if no `build_id`** — no registration, no symbolication.
+3. **`processEvent()` / `patchFrames()`** — on errors, attaches `debug_meta.images` and wasm frame metadata for server-side symbolication.
+
+**Test buttons:**
+
+| Button | Action |
 | --- | --- |
-| **Works ✅** | `WebAssembly.instantiateStreaming(fetch(url), …)` — browser keeps `url` |
-| **Works ✅** | Serve `maze.wasm` as `Content-Type: application/wasm` |
-| **Works ✅** | Build with `-Wl,--build-id` (already in Makefile) |
-| **Works ✅** | Stable URL: `http://localhost:8080/web/maze.wasm` (= Sentry `code_file`) |
-| **Works ✅** | Init `@sentry/wasm` **before** wasm loads (patches `instantiateStreaming`) |
-| **Fails ❌** | `fetch` → `arrayBuffer` → `WebAssembly.instantiate` (no URL for Sentry) |
-| **Fails ❌** | Wrong MIME type → streaming fails |
-| **Fails ❌** | No debug symbols uploaded to Sentry for that wasm URL + build id |
+| Report test error | `Sentry.captureException(new Error('js test'))` |
+| Trigger WASM crash | C++ `trigger_test_crash()` → `abort()` |
 
-**Where in code:** `web/main.js` → `loadWasm()` → `WASM_URL` + `instantiateStreaming`.
-
-Console should show: `wasm loaded { url: "…/web/maze.wasm", instance: … }`.
-
-## C++ → JS API
-
-Called as `mod._function_name()` from JavaScript:
-
-| C export | Does |
-| --- | --- |
-| `init_game(seed, level)` | New maze |
-| `handle_key(code, down)` | Keyboard |
-| `step_game(dt_ms)` | Movement |
-| `render_frame()` | Draw frame into wasm memory |
-| `get_pixel_buffer_ptr()` | Where pixels live (`mod.HEAPU8`) |
-| `player_key_count()` / `keys_required()` | Key progress |
-| `game_won()` | Win flag |
+Symbol upload to Sentry is still required for readable wasm stacks — see [docs/sentry-wasm-prep.md](docs/sentry-wasm-prep.md).
 
 ## Controls
 
-WASD or arrows to move/turn. Collect all keys, then reach the exit (bottom-right). **Regenerate** = new maze, same level. **Next level** after win.
-
-## Next step
-
-Add `@sentry/browser` + `@sentry/wasm`, call `Sentry.init({ integrations: [wasmIntegration()] })` in `main.js` **before** `loadWasm()`.
+WASD or arrows. Collect all keys, exit bottom-right. Regenerate / Next level after win.
