@@ -1,0 +1,4 @@
+web/maze.js
+web/maze.wasm
+*.o
+*.d
