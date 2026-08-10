@@ -49,7 +49,7 @@ private:
     Maze maze_;
     Player player_;
     bool keys_down_[256];
-    bool explored_[MAZE_HEIGHT][MAZE_WIDTH];
+    bool explored_[MAZE_MAX_HEIGHT][MAZE_MAX_WIDTH];
     int keys_collected_;
     bool won_;
     int level_;

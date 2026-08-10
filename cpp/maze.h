@@ -2,8 +2,8 @@
 
 #include <cstdint>
 
-constexpr int MAZE_WIDTH = 16;
-constexpr int MAZE_HEIGHT = 16;
+constexpr int MAZE_MAX_WIDTH = 32;
+constexpr int MAZE_MAX_HEIGHT = 32;
 constexpr int MAX_DOORS = 4;
 
 constexpr uint8_t CELL_OPEN = 0;
@@ -34,13 +34,11 @@ public:
     float start_angle() const { return start_angle_; }
     int level() const { return level_; }
 
-    int width() const { return MAZE_WIDTH; }
-    int height() const { return MAZE_HEIGHT; }
+    int width() const { return width_; }
+    int height() const { return height_; }
 
 private:
-    void place_key_and_doors_on_path(const int path_x[], const int path_y[], int path_len);
-
-    uint8_t grid_[MAZE_HEIGHT][MAZE_WIDTH];
+    uint8_t grid_[MAZE_MAX_HEIGHT][MAZE_MAX_WIDTH];
     int door_x_[MAX_DOORS];
     int door_y_[MAX_DOORS];
     int door_count_;
@@ -48,4 +46,6 @@ private:
     int start_y_;
     float start_angle_;
     int level_;
+    int width_;
+    int height_;
 };

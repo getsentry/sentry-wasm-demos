@@ -87,18 +87,20 @@ void draw_player_marker(uint8_t* buffer, int width, int cx, int cy, float angle)
 void draw_minimap(
     const Maze& maze,
     const Player& player,
-    const bool explored[MAZE_HEIGHT][MAZE_WIDTH],
+    const bool explored[MAZE_MAX_HEIGHT][MAZE_MAX_WIDTH],
     uint8_t* rgba_buffer,
     int screen_width,
     int screen_height) {
     const int map_x = screen_width - MINIMAP_SIZE - 8;
     const int map_y = 8;
-    const int cell_px = MINIMAP_SIZE / MAZE_WIDTH;
+    const int maze_w = maze.width();
+    const int maze_h = maze.height();
+    const int cell_px = MINIMAP_SIZE / maze_w;
 
     fill_rect(rgba_buffer, screen_width, map_x - 2, map_y - 2, MINIMAP_SIZE + 4, MINIMAP_SIZE + 4, 8, 8, 12);
 
-    for (int gy = 0; gy < MAZE_HEIGHT; ++gy) {
-        for (int gx = 0; gx < MAZE_WIDTH; ++gx) {
+    for (int gy = 0; gy < maze_h; ++gy) {
+        for (int gx = 0; gx < maze_w; ++gx) {
             uint8_t r = 0;
             uint8_t g = 0;
             uint8_t b = 0;
@@ -116,8 +118,8 @@ void draw_minimap(
     }
 
     // Keys, doors, and exit stay visible through unexplored fog on the minimap only.
-    for (int gy = 0; gy < MAZE_HEIGHT; ++gy) {
-        for (int gx = 0; gx < MAZE_WIDTH; ++gx) {
+    for (int gy = 0; gy < maze_h; ++gy) {
+        for (int gx = 0; gx < maze_w; ++gx) {
             const uint8_t cell = maze.cell(gx, gy);
             if (!is_beacon_cell(cell)) {
                 continue;

@@ -115,7 +115,7 @@ void Game::update_exploration() {
         for (int cx = min_x; cx <= max_x; ++cx) {
             for (int ny = cy - 1; ny <= cy + 1; ++ny) {
                 for (int nx = cx - 1; nx <= cx + 1; ++nx) {
-                    if (nx < 0 || ny < 0 || nx >= MAZE_WIDTH || ny >= MAZE_HEIGHT) {
+                    if (nx < 0 || ny < 0 || nx >= maze_.width() || ny >= maze_.height()) {
                         continue;
                     }
                     explored_[ny][nx] = true;
