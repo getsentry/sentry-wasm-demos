@@ -8,8 +8,24 @@ Game game;
 
 extern "C" {
 
-void init_game() {
-    game.init();
+void init_game(int seed) {
+    game.init(seed);
+}
+
+void handle_key(int key_code, int down) {
+    game.handle_key(key_code, down != 0);
+}
+
+void step_game(float dt_ms) {
+    game.step(dt_ms);
+}
+
+int player_has_key() {
+    return game.has_key() ? 1 : 0;
+}
+
+int game_won() {
+    return game.won() ? 1 : 0;
 }
 
 void render_frame() {

@@ -74,7 +74,7 @@ void draw_ceiling_and_floor(uint8_t* buffer, int width, int height) {
 
 } // namespace
 
-void raycast_frame(const Maze& maze, const Player& player, uint8_t* rgba_buffer, int width, int height) {
+void raycast_frame(const Maze& maze, const Player& player, bool has_key, uint8_t* rgba_buffer, int width, int height) {
     draw_ceiling_and_floor(rgba_buffer, width, height);
 
     // View direction and a vector perpendicular to it that spans the screen (camera plane).
@@ -134,7 +134,7 @@ void raycast_frame(const Maze& maze, const Player& player, uint8_t* rgba_buffer,
                 side = 1;
             }
 
-            if (maze.is_wall(map_x, map_y)) {
+            if (maze.blocks_raycast(map_x, map_y, has_key)) {
                 hit = true;
             }
         }

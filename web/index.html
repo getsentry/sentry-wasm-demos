@@ -9,8 +9,10 @@
   <body>
     <main>
       <h1>Raycaster Maze</h1>
-      <p class="hint">640×480 framebuffer from WASM — stubs only for now.</p>
-      <canvas id="screen" width="640" height="480"></canvas>
+      <p id="hud">WASD move, arrows turn — find exit</p>
+      <div class="canvas-wrap">
+        <canvas id="screen" width="640" height="480"></canvas>
+      </div>
       <p id="status">Loading WASM module…</p>
     </main>
     <script src="maze.js"></script>
