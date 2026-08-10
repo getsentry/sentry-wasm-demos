@@ -1,122 +1,76 @@
 # Raycaster Maze (Emscripten)
 
-Browser raycaster maze written in C++17 and compiled to WebAssembly with Emscripten. No external C++ libraries or image assets — rendering uses a shared RGBA pixel buffer that JavaScript blits to a `<canvas>`.
+C++17 raycaster → WebAssembly. JavaScript draws the pixel buffer on a `<canvas>`.
 
-## Prerequisites
-
-- [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html) (`emcc` on your `PATH`)
-- Python 3 (for a local static file server)
-
-Activate emsdk before building:
+## Build & run
 
 ```bash
 source /path/to/emsdk/emsdk_env.sh
-```
-
-## Project layout
-
-```
-cpp/maze.{h,cpp}       — seeded recursive-backtracker maze + key/door/exit
-cpp/raycast.{h,cpp}    — DDA raycasting + distance fog
-cpp/minimap.{h,cpp}    — 128×128 HUD minimap overlay
-cpp/game.{h,cpp}       — player, input, collision, game loop
-cpp/main.cpp           — Emscripten exports
-web/index.html         — page shell, win overlay, regenerate button
-web/main.js            — WASM load, input, rAF loop, level progression
-web/style.css
-web/maze.js            — generated Emscripten glue (after build)
-web/maze.wasm          — generated module (after build)
-Makefile
-```
-
-Canvas size: **640×480**. Maze grid: **16×16** cells.
-
-## Build
-
-```bash
 make
-```
-
-```bash
-make clean   # remove build artifacts
-```
-
-Build flags include `-g`, `-O2`, and `-Wl,--build-id` for later Sentry symbolication.
-
-## Run
-
-```bash
 python3 -m http.server 8080
 ```
 
-Open [http://localhost:8080/web/](http://localhost:8080/web/).
+Open [http://localhost:8080/web/](http://localhost:8080/web/). Hard-refresh after rebuilds.
+
+Build uses `-g`, `-O2`, `-Wl,--build-id` (needed for Sentry symbolication).
+
+## Files (what each one is)
+
+| File | Role |
+| --- | --- |
+| `cpp/*.cpp` | Game in C++ |
+| `cpp/main.cpp` | Functions exported to JS (`init_game`, `step_game`, …) |
+| `web/maze.wasm` | Compiled game (binary) |
+| `web/maze.js` | Emscripten glue (generated — don't edit) |
+| `web/main.js` | Loads wasm + runs the game loop |
+
+## How the page loads (simple)
+
+```
+index.html
+  ├── maze.js          adds createMazeModule() to the page
+  └── main.js
+        ├── loadWasm()           fetch maze.wasm → instantiateStreaming
+        └── game loop            mod._step_game / _render_frame → canvas
+```
+
+## WASM + Sentry — what works / what doesn't
+
+**Goal:** when wasm crashes, Sentry shows a readable stack trace (function names, not just `0x1234`).
+
+| | |
+| --- | --- |
+| **Works ✅** | `WebAssembly.instantiateStreaming(fetch(url), …)` — browser keeps `url` |
+| **Works ✅** | Serve `maze.wasm` as `Content-Type: application/wasm` |
+| **Works ✅** | Build with `-Wl,--build-id` (already in Makefile) |
+| **Works ✅** | Stable URL: `http://localhost:8080/web/maze.wasm` (= Sentry `code_file`) |
+| **Works ✅** | Init `@sentry/wasm` **before** wasm loads (patches `instantiateStreaming`) |
+| **Fails ❌** | `fetch` → `arrayBuffer` → `WebAssembly.instantiate` (no URL for Sentry) |
+| **Fails ❌** | Wrong MIME type → streaming fails |
+| **Fails ❌** | No debug symbols uploaded to Sentry for that wasm URL + build id |
+
+**Where in code:** `web/main.js` → `loadWasm()` → `WASM_URL` + `instantiateStreaming`.
+
+Console should show: `wasm loaded { url: "…/web/maze.wasm", instance: … }`.
+
+## C++ → JS API
+
+Called as `mod._function_name()` from JavaScript:
+
+| C export | Does |
+| --- | --- |
+| `init_game(seed, level)` | New maze |
+| `handle_key(code, down)` | Keyboard |
+| `step_game(dt_ms)` | Movement |
+| `render_frame()` | Draw frame into wasm memory |
+| `get_pixel_buffer_ptr()` | Where pixels live (`mod.HEAPU8`) |
+| `player_key_count()` / `keys_required()` | Key progress |
+| `game_won()` | Win flag |
 
 ## Controls
 
-| Input | Action |
-| --- | --- |
-| **W / S** | Move forward / backward |
-| **A / D** | Strafe left / right |
-| **← / →** | Turn left / right |
-| **↑ / ↓** | Move forward / backward |
-| **Regenerate maze** | Same level, new random seed |
-| **Next level** (after win) | Harder maze: more walls, shorter fog |
+WASD or arrows to move/turn. Collect all keys, then reach the exit (bottom-right). **Regenerate** = new maze, same level. **Next level** after win.
 
-Pick up the **key** (cyan), pass the **door** (magenta), reach the **exit gap** on the **east outer wall** (yellow on minimap).
+## Next step
 
-Entrance and exit appear as **holes in the border wall** in the 3D view (rays pass through — you see darkness beyond).
-
-## Procedural generation
-
-Each `init_game(seed, level)` call:
-
-1. Carves a maze with **recursive backtracker** (seeded LCG shuffle)
-2. Punches a **west entrance** and **east exit** gap in the outer wall
-3. Places **key** and **door** along the route by BFS distance
-4. Adds extra walls for higher **levels** (keeps spawn→exit reachable)
-
-Same seed + level → same layout. Regenerate picks a new seed.
-
-## Difficulty by level
-
-| Level | Changes |
-| --- | --- |
-| 1 | Base carved maze |
-| 2+ | +4 random wall attempts per level (connectivity checked) |
-| 2+ | Fog visibility tightens (~0.55 cells less per level) |
-
-## Minimap (top-right)
-
-| Color | Meaning |
-| --- | --- |
-| Grey | Wall |
-| Dark | Walkable floor |
-| Light green | Entrance gap (west) |
-| Green dot | Player (tip = facing) |
-| Cyan | Key |
-| Magenta | Door |
-| Yellow | Exit gap (east) |
-
-## Screenshot
-
-<!-- Add docs/screenshot.png after capturing gameplay -->
-
-_Screenshot placeholder: capture a first-person frame showing the east exit gap and minimap, save as `docs/screenshot.png`._
-
-## Exported WASM API
-
-| Function | Purpose |
-| --- | --- |
-| `init_game(seed, level)` | Procedural maze + reset player |
-| `get_level()` | Current level |
-| `handle_key(code, down)` | Track WASD / arrow keys |
-| `step_game(dt_ms)` | Move player with wall collision |
-| `render_frame()` | Raycast + minimap into RGBA buffer |
-| `player_has_key()` | `1` if key collected |
-| `game_won()` | `1` if player reached exit |
-| `get_width()` / `get_height()` | 640 / 480 |
-| `get_pixel_buffer_ptr()` | Pointer into `HEAPU8` |
-
-## Next steps
-
-- Sentry WASM integration for crash reporting and symbolication
+Add `@sentry/browser` + `@sentry/wasm`, call `Sentry.init({ integrations: [wasmIntegration()] })` in `main.js` **before** `loadWasm()`.
