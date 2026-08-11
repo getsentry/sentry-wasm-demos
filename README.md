@@ -13,64 +13,74 @@ python3 -m http.server 8080
 
 Open [http://localhost:8080/web/](http://localhost:8080/web/). Hard-refresh after rebuilds.
 
-### Sentry DSN (not in HTML)
-
-DSN is **not** in `index.html`. Configure locally, then rebuild JS:
+### Sentry config (not in HTML)
 
 ```bash
 cd web
-cp .env.example .env   # add your DSN
+cp .env.example .env   # SENTRY_DSN + sentry-cli vars
 npm run build:js
 ```
 
-`web/.env` and `web/app.js` are gitignored. Rebuild after changing the DSN.
+`web/.env`, `web/app.js`, and `web/maze.debug.wasm` are gitignored.
 
-Note: browser SDKs must embed the DSN in the bundle at build time — it is not a secret key, but this keeps it out of the repo and the page source.
+C++ build uses `-g`, `-O2`, `-Wl,--build-id`. See [docs/sentry-wasm-prep.md](docs/sentry-wasm-prep.md).
 
-C++ build uses `-g`, `-O2`, `-Wl,--build-id`. See [docs/sentry-wasm-prep.md](docs/sentry-wasm-prep.md) for non-obvious wasm requirements.
+## Debug symbols (`make symbols`)
 
-## Files
+Requires [wasm-split](https://github.com/getsentry/symbolicator/tree/master/crates/wasm-split) from Symbolicator:
 
-| File | Role |
-| --- | --- |
-| `cpp/*.cpp` | Game in C++ |
-| `cpp/main.cpp` | Exported functions incl. `trigger_test_crash()` |
-| `web/maze.wasm` | Compiled game |
-| `web/maze.js` | Emscripten glue (generated — don't edit) |
-| `web/sentry-init.js` | `Sentry.init` + `wasmIntegration()` |
-| `web/bootstrap.js` | Imports sentry-init **then** main (init order) |
-| `web/main.js` | Wasm load + game loop + test buttons |
-| `web/build-js.mjs` | Bundles JS; reads `SENTRY_DSN` from `web/.env` |
-| `web/app.js` | Bundled output (`npm run build:js`, gitignored) — served by browser |
-
-## Load order
-
-```
-index.html
-  maze.js
-  app.js  (bundle)
-    bootstrap.js
-      sentry-init.js   ← patches instantiateStreaming, Sentry.init
-      main.js          ← loadWasm() → game
+```bash
+cargo install wasm-split --git https://github.com/getsentry/symbolicator.git wasm-split
 ```
 
-## Sentry / wasmIntegration
+Then:
 
-**What `wasmIntegration()` does:**
+```bash
+make
+make symbols
+```
 
-1. **`patchWebAssembly()`** — wraps `WebAssembly.instantiateStreaming`. When `maze.wasm` loads, calls `registerModule(module, response.url)`.
-2. **`registerModule()`** (`@sentry/wasm` `registry.ts`) — reads `build_id` from wasm (Makefile `-Wl,--build-id`). Stores debug image with `code_file` = wasm URL. **Returns `null` if no `build_id`** — no registration, no symbolication.
-3. **`processEvent()` / `patchFrames()`** — on errors, attaches `debug_meta.images` and wasm frame metadata for server-side symbolication.
+This runs `wasm-split web/maze.wasm -d web/maze.debug.wasm --strip` and prints the `sentry-cli` upload command.
+
+Upload (set `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` in `web/.env`):
+
+```bash
+sentry-cli debug-files upload -t wasm web/maze.debug.wasm
+```
+
+## Verify symbolication
+
+1. Set `SENTRY_DSN` in `web/.env`, run `npm run build:js`
+2. Set `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` in `web/.env`
+3. `make && make symbols` — upload `web/maze.debug.wasm` with sentry-cli
+4. Serve: `python3 -m http.server 8080` → open `/web/`
+5. Click **WASM divzero** or **WASM deep crash**
+
+In the Sentry issue, expect:
+
+- `debug_meta.images[0].type === 'wasm'`
+- `code_file` matches `http://localhost:8080/web/maze.wasm` (your serve URL)
+- `code_id` / `debug_id` present (from `--build-id`)
+- WASM frame with `addr_mode: "rel:0"`, `platform: "native"`
+- After processing: symbolicated to `cpp/chaos/chaos_deep1.cpp`, etc.
 
 **Test buttons:**
 
 | Button | Action |
 | --- | --- |
-| Report test error | `Sentry.captureException(new Error('js test'))` |
-| Trigger WASM crash | C++ `trigger_test_crash()` → `abort()` |
+| Report test error | JS `captureException` — pipeline sanity check |
+| WASM divzero | `trigger_crash_divzero()` — integer divide by zero |
+| WASM deep crash | `deep5→…→deep1` then divide by zero — stack depth test |
 
-Symbol upload to Sentry is still required for readable wasm stacks — see [docs/sentry-wasm-prep.md](docs/sentry-wasm-prep.md).
+## Files
+
+| File | Role |
+| --- | --- |
+| `cpp/chaos/` | Intentional wasm crashes for Sentry testing |
+| `web/sentry-init.js` | `Sentry.init` + `wasmIntegration()` |
+| `web/build-js.mjs` | Bundles JS; injects `SENTRY_DSN` from `.env` |
+| `web/maze.debug.wasm` | Debug split module for symbol upload (`make symbols`) |
 
 ## Controls
 
-WASD or arrows. Collect all keys, exit bottom-right. Regenerate / Next level after win.
+WASD or arrows. Collect all keys, exit bottom-right.

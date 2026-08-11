@@ -1,7 +1,6 @@
 #include "game.h"
 
 #include <cstdint>
-#include <cstdlib>
 
 namespace {
 Game game;
@@ -53,8 +52,4 @@ uint8_t* get_pixel_buffer_ptr() {
     return game.pixel_buffer();
 }
 
-void trigger_test_crash() {
-    std::abort();
-}
-
-} 
+} // extern "C"

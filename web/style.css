@@ -160,20 +160,29 @@ h1 {
 }
 
 #report-js-error {
+  border-color: #3edcff;
+  color: #3edcff;
+}
+
+#report-js-error:hover {
+  background: rgba(62, 220, 255, 0.12);
+}
+
+#trigger-wasm-divzero {
   border-color: #92dd00;
   color: #92dd00;
 }
 
-#report-js-error:hover {
+#trigger-wasm-divzero:hover {
   background: rgba(146, 221, 0, 0.12);
 }
 
-#trigger-wasm-crash {
+#trigger-wasm-deep {
   border-color: #ff45a8;
   color: #ff45a8;
 }
 
-#trigger-wasm-crash:hover {
+#trigger-wasm-deep:hover {
   background: rgba(255, 69, 168, 0.12);
 }
 

@@ -103,7 +103,7 @@ function onKey(event, down) {
   mod._handle_key(event.keyCode, down ? 1 : 0);
 }
 
-function wireTestButtons() {
+function callWasmCrash(exportName, label) {
   const feedback = document.getElementById('sentry-feedback');
 
   function showFeedback(message) {
@@ -113,30 +113,48 @@ function wireTestButtons() {
     console.log('[sentry test]', message);
   }
 
+  const fn = mod[`_${exportName}`];
+  if (typeof fn !== 'function') {
+    showFeedback(`${exportName} missing — run make and hard-refresh`);
+    return;
+  }
+
+  showFeedback(`Calling ${label}…`);
+  try {
+    fn();
+    showFeedback(`${label} returned (unexpected)`);
+  } catch (err) {
+    console.error('[wasm crash]', err);
+    console.error('[wasm crash stack]\n', err.stack);
+    Sentry.captureException(err);
+    showFeedback(
+      sentryDsnSet
+        ? `${label}: ${err.message} — sent to Sentry.`
+        : `${label}: ${err.message} — no DSN in build.`,
+    );
+  }
+}
+
+function wireTestButtons() {
   document.getElementById('report-js-error')?.addEventListener('click', () => {
+    const feedback = document.getElementById('sentry-feedback');
     const err = new Error('js test');
     Sentry.captureException(err);
-    if (sentryDsnSet) {
-      showFeedback('Sent JS test error to Sentry — check your Sentry project Issues.');
-    } else {
-      showFeedback('Sentry not configured in this build (no DSN at build time). Check DevTools console.');
+    const message = sentryDsnSet
+      ? 'Sent JS test error to Sentry — check Issues.'
+      : 'captureException called — no DSN in build.';
+    if (feedback) {
+      feedback.textContent = message;
     }
+    console.log('[sentry test]', message);
   });
 
-  document.getElementById('trigger-wasm-crash')?.addEventListener('click', () => {
-    showFeedback('Calling C++ abort()…');
-    try {
-      mod._trigger_test_crash();
-      showFeedback('trigger_test_crash returned (unexpected — should have aborted).');
-    } catch (err) {
-      Sentry.captureException(err);
-      showFeedback(
-        sentryDsnSet
-          ? `WASM crashed: ${err.message} — event sent to Sentry.`
-          : `WASM crashed: ${err.message} — Sentry not configured in this build.`,
-      );
-      console.error('[wasm crash]', err);
-    }
+  document.getElementById('trigger-wasm-divzero')?.addEventListener('click', () => {
+    callWasmCrash('trigger_crash_divzero', 'WASM divzero');
+  });
+
+  document.getElementById('trigger-wasm-deep')?.addEventListener('click', () => {
+    callWasmCrash('trigger_crash_deep', 'WASM deep stack');
   });
 }
 
