@@ -23,7 +23,7 @@ npm run build:js
 
 `web/.env`, `web/app.js`, and `web/maze.debug.wasm` are gitignored.
 
-C++ build uses `-g`, `-O2`, `-Wl,--build-id`. See [docs/sentry-wasm-prep.md](docs/sentry-wasm-prep.md).
+C++ build uses `-g`, `-O2`, `-Wl,--build-id`, and `-fno-optimize-sibling-calls` (keeps the deep crash stack from collapsing at `-O2`).
 
 ## Debug symbols (`make symbols`)
 
@@ -36,9 +36,10 @@ cargo install wasm-split --git https://github.com/getsentry/symbolicator.git was
 Then:
 
 ```bash
-make
 make symbols
 ```
+
+(`make symbols` rebuilds `maze.wasm` with `-g` and `-Wl,--build-id`, then splits debug info.)
 
 This runs `wasm-split web/maze.wasm -d web/maze.debug.wasm --strip` and prints the `sentry-cli` upload command.
 

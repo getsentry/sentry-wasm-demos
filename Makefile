@@ -1,5 +1,10 @@
 EMCC ?= emcc
-WASM_SPLIT ?= wasm-split
+# emsdk_env.sh resets PATH and drops ~/.cargo/bin — resolve wasm-split explicitly.
+WASM_SPLIT ?= $(shell \
+	if command -v wasm-split >/dev/null 2>&1; then command -v wasm-split; \
+	elif test -x "$(HOME)/.cargo/bin/wasm-split"; then echo "$(HOME)/.cargo/bin/wasm-split"; \
+	elif test -x bin/wasm-split; then echo bin/wasm-split; \
+	else echo wasm-split; fi)
 
 SRC = cpp/main.cpp cpp/maze.cpp cpp/raycast.cpp cpp/game.cpp cpp/minimap.cpp \
 	cpp/chaos/chaos.cpp cpp/chaos/chaos_divzero.cpp \
@@ -34,11 +39,11 @@ all: $(OUT_JS)
 $(OUT_JS): $(SRC)
 	$(EMCC) $(EMCC_FLAGS) $(SRC) -o $(OUT_JS)
 
-symbols: $(OUT_WASM)
-	@test -f "$(OUT_WASM)" || (echo "Run 'make' first." && exit 1)
-	@command -v $(WASM_SPLIT) >/dev/null 2>&1 || ( \
-		echo "wasm-split not found. Install from https://github.com/getsentry/symbolicator/tree/master/crates/wasm-split"; \
-		echo "  cargo install wasm-split --git https://github.com/getsentry/symbolicator.git wasm-split"; \
+symbols: all
+	@test -x "$(WASM_SPLIT)" || ( \
+		echo "wasm-split not found at '$(WASM_SPLIT)'."; \
+		echo "Install: cargo install wasm-split --git https://github.com/getsentry/symbolicator.git wasm-split"; \
+		echo "Or download: https://github.com/getsentry/symbolicator/releases (wasm-split-Darwin-universal) → bin/wasm-split"; \
 		exit 1)
 	$(WASM_SPLIT) $(OUT_WASM) -d $(DEBUG_WASM) --strip
 	@echo ""
