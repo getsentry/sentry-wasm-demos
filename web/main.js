@@ -1,8 +1,10 @@
 import { formatHarnessBanner, getHarnessConfig } from './harness/config.js';
+import { showHarnessError } from './harness/error-ui.js';
 import { getCreateModule, loadGlueScript } from './harness/loaders.js';
+import { wireHarnessPresets } from './harness/presets.js';
 import { setBackendBadge } from './harness/sentry-tests.js';
 
-const status = document.getElementById('status');
+wireHarnessPresets();
 
 async function main() {
   const config = getHarnessConfig();
@@ -25,7 +27,5 @@ async function main() {
 
 main().catch(err => {
   console.error(err);
-  if (status) {
-    status.textContent = err.message;
-  }
+  showHarnessError(err);
 });

@@ -10,6 +10,10 @@
  * @param {'streaming' | 'instantiate' | 'default'} options.load
  */
 export async function loadEmscriptenModule({ createModule, wasmUrl, load }) {
+  if (load !== 'default' && load !== 'instantiate' && load !== 'streaming') {
+    throw new Error(`Invalid load mode ${JSON.stringify(load)}`);
+  }
+
   if (load === 'default') {
     return createModule();
   }

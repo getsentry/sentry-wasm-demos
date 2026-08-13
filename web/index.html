@@ -13,6 +13,15 @@
       <p id="hud">WASD move, arrows turn — collect keys, reach the exit</p>
       <div class="canvas-wrap">
         <canvas id="screen" width="640" height="480"></canvas>
+        <div id="error-overlay" class="overlay harness-error hidden" aria-hidden="true">
+          <div class="overlay-panel error-panel">
+            <p class="error-title">Dead end</p>
+            <blockquote class="error-quote">Code breaks, fix it faster</blockquote>
+            <p class="error-quote-cite">— Sentry</p>
+            <p id="error-message" class="error-message" role="alert"></p>
+            <a id="error-reset" class="error-reset" href="/web/">Reset to default harness</a>
+          </div>
+        </div>
         <div id="win-overlay" class="overlay hidden" aria-hidden="true">
           <div class="overlay-panel">
             <p class="overlay-title">Escaped!</p>
@@ -38,12 +47,51 @@
 
       <section class="harness-help" aria-labelledby="harness-help-title">
         <h2 id="harness-help-title">Harness URL params</h2>
-        <ul>
-          <li><code>?backend=emscripten-raycast</code> (default) · CPU pixel buffer</li>
-          <li><code>?backend=emscripten-opengl</code> · WebGL (stub)</li>
-          <li><code>?backend=rust</code> · wasm-bindgen (stub)</li>
-          <li><code>?load=streaming|instantiate|default</code></li>
-          <li><code>?symbols=0</code> · use <code>maze.nosym.*</code> build</li>
+        <p class="harness-help-intro">Click a preset to reload with that config.</p>
+        <ul class="harness-presets">
+          <li>
+            <a class="harness-preset" data-harness-preset="" href="./"><code>/web/</code></a>
+            default harness
+          </li>
+          <li>
+            <a class="harness-preset" data-harness-preset="backend=emscripten-raycast" href="?backend=emscripten-raycast"
+              ><code>?backend=emscripten-raycast</code></a
+            >
+            CPU pixel buffer
+          </li>
+          <li>
+            <a class="harness-preset" data-harness-preset="backend=emscripten-opengl" href="?backend=emscripten-opengl"
+              ><code>?backend=emscripten-opengl</code></a
+            >
+            WebGL (stub)
+          </li>
+          <li>
+            <a class="harness-preset" data-harness-preset="backend=rust" href="?backend=rust"><code>?backend=rust</code></a>
+            wasm-bindgen (stub)
+          </li>
+          <li>
+            <a class="harness-preset" data-harness-preset="load=streaming" href="?load=streaming"
+              ><code>?load=streaming</code></a
+            >
+            (default) ·
+            <a class="harness-preset" data-harness-preset="load=instantiate" href="?load=instantiate"
+              ><code>?load=instantiate</code></a
+            >
+            ·
+            <a class="harness-preset" data-harness-preset="load=default" href="?load=default"
+              ><code>?load=default</code></a
+            >
+          </li>
+          <li>
+            <a class="harness-preset" data-harness-preset="symbols=0" href="?symbols=0"><code>?symbols=0</code></a>
+            · <code>maze.nosym.*</code> build
+          </li>
+          <li>
+            <a class="harness-preset" data-harness-preset="load=streaming&symbols=0" href="?load=streaming&amp;symbols=0"
+              ><code>?load=streaming&amp;symbols=0</code></a
+            >
+            combine with <code>&amp;</code>
+          </li>
         </ul>
       </section>
     </main>

@@ -32,5 +32,5 @@ src/
 
 Open `/web/` (default backend). URL overrides:
 
-- `?symbols=0` — nosym build
-- `?load=streaming|instantiate|default`
+- `?symbols=0` — nosym build (`make no-symbols`)
+- `?load=streaming` (default) · `?load=instantiate` · `?load=default` — one value only; invalid params show an error on the page

@@ -53,12 +53,16 @@ Gitignored: `web/.env`, `web/app.js`, `web/assets/*/*` build artifacts (`.gitkee
 
 ## End-to-end workflow (copy-paste)
 
-One session from zero to a Sentry test crash. Run each block in order.
+One session from zero to a Sentry test crash. Run each step in order (see [Quick reference](#quick-reference) for shortcuts).
+
+**Step 1.** Emscripten + repo root
 
 ```bash
 source ~/dev/emsdk/emsdk_env.sh
 cd /path/to/sentry-wasm-emscripten
 ```
+
+**Step 2.** Build wasm (both variants — default URL and `?symbols=0`)
 
 ```bash
 make clean && make && make symbols && make no-symbols
@@ -67,6 +71,8 @@ make clean && make && make symbols && make no-symbols
 `make symbols` runs `wasm-split --strip`, which moves DWARF from `maze.wasm` into `maze.debug.wasm`. Re-running split on an already-stripped wasm produces a useless debug file — `make clean` forces a fresh `-g` build first. Healthy sizes: `maze.wasm` ~26 KB, `maze.debug.wasm` ~184 KB.
 
 `make no-symbols` is a **separate** build (no `-g`) for `?symbols=0`. `make clean` deletes both `maze.*` and `maze.nosym.*` — always re-run **both** targets after clean.
+
+**Step 3.** Upload debug wasm to Sentry (skip for local-only play)
 
 ```bash
 set -a && source web/.env && set +a
@@ -85,6 +91,8 @@ Optional: `--wait` blocks until Sentry finishes processing (slower, but surfaces
 Requires `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` in `web/.env` (see `.env.example`).  
 `sentry-cli` does not read `.env` automatically — `source` exports the vars for that shell.
 
+**Step 4.** Bundle JS (`SENTRY_DSN` from `web/.env` is baked in at build time)
+
 ```bash
 cd web
 npm install
@@ -92,7 +100,7 @@ npm run build:js
 cd ..
 ```
 
-Requires `SENTRY_DSN` in `web/.env` for events to reach Sentry.
+**Step 5.** Serve static files
 
 ```bash
 python3 -m http.server 8080
@@ -100,7 +108,7 @@ python3 -m http.server 8080
 
 Open [http://localhost:8080/web/](http://localhost:8080/web/) (no query params). Hard-refresh after rebuilds. Click **WASM deep crash**.
 
-Re-run `make clean && make && make symbols && make no-symbols` and upload after any C++ change (`debug_id` changes per build).
+Re-run step **2** and step **3** after any C++ change (`debug_id` changes per build).
 
 ## Harness URL params
 
@@ -112,11 +120,13 @@ Requires **`make symbols`** for default / `?symbols=1`, and **`make no-symbols`*
 | `load` | `streaming`, `instantiate`, `default` | `streaming` | `maze.*` or `maze.nosym.*` per `symbols` |
 | `symbols` | `1` / `0` | `1` | `make symbols` / `make no-symbols` |
 
-Examples:
+Examples (use **`&`** between params, one value each — not `|`):
 
 - [http://localhost:8080/web/?load=instantiate](http://localhost:8080/web/?load=instantiate)
 - [http://localhost:8080/web/?symbols=0](http://localhost:8080/web/?symbols=0)
 - [http://localhost:8080/web/?backend=rust](http://localhost:8080/web/?backend=rust) (stub)
+
+Invalid values (e.g. `?load=streaming|instantiate|default`) fail fast with a red error under the canvas instead of loading silently.
 
 ## Build variants (emscripten-raycast)
 
@@ -180,3 +190,48 @@ Use default URL `/web/` with badge `symbols=on` · `load=streaming` for symbolic
 ## Controls
 
 WASD or arrows. Collect all keys, exit bottom-right.
+
+## Quick reference
+
+**Fresh local run** — play the game in the browser; crashes stay local (Sentry may get events if `SENTRY_DSN` is set, but stacks won’t show C++ file:line without upload)
+
+```bash
+make clean && make && make symbols && make no-symbols
+cd web && npm run build:js && cd ..
+python3 -m http.server 8080
+```
+
+→ http://localhost:8080/web/ · hard-refresh after rebuilds
+
+**Test Sentry stacks** — full local run **and** send the debug map to Sentry so issues show symbolicated wasm frames (`chaos_deep1`, etc.)
+
+```bash
+make clean && make && make symbols && make no-symbols
+set -a && source web/.env && set +a
+sentry-cli debug-files upload -t wasm web/assets/emscripten-raycast/maze.debug.wasm
+cd web && npm run build:js && cd ..
+python3 -m http.server 8080
+```
+
+→ open `/web/` · click **WASM deep crash** · check Sentry Issues
+
+**Only changed JS / harness / HTML / CSS**
+
+```bash
+cd web && npm run build:js && cd ..
+```
+
+→ hard-refresh · no `make`, no upload
+
+**Changed C++**
+
+```bash
+make clean && make && make symbols && make no-symbols
+set -a && source web/.env && set +a
+sentry-cli debug-files upload -t wasm web/assets/emscripten-raycast/maze.debug.wasm
+cd web && npm run build:js && cd ..
+```
+
+→ re-upload required (`debug_id` changes every wasm build)
+
+**README only** — nothing to rebuild

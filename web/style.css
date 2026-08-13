@@ -111,6 +111,96 @@ h1 {
   color: #8cf;
 }
 
+.harness-error {
+  background: rgba(10, 10, 12, 0.88);
+  pointer-events: auto;
+}
+
+.error-panel {
+  max-width: 34rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid #2a2a32;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #181225 0%, #0f0d18 100%);
+  box-shadow: 0 0 40px rgba(255, 69, 168, 0.08);
+}
+
+.error-title {
+  margin: 0 0 0.75rem;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ff45a8;
+  text-shadow: 0 0 24px rgba(255, 69, 168, 0.45);
+}
+
+.error-quote {
+  margin: 0;
+  padding: 0;
+  border: none;
+  font-size: 1rem;
+  font-style: italic;
+  color: #3edcff;
+  line-height: 1.4;
+}
+
+.error-quote-cite {
+  margin: 0.35rem 0 1rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: #666;
+}
+
+.error-message {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #2a2a32;
+  border-radius: 4px;
+  background: #0a0a0c;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: #ffe566;
+  text-align: left;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.error-reset {
+  display: inline-block;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid #92dd00;
+  border-radius: 4px;
+  background: rgba(146, 221, 0, 0.08);
+  color: #92dd00;
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.error-reset:hover {
+  background: rgba(146, 221, 0, 0.18);
+}
+
+.main--error .controls,
+.main--error .sentry-panel {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.main--error #status {
+  display: none;
+}
+
+.main--error .harness-help {
+  border-top-color: #ff45a8;
+}
+
+.main--error .harness-help h2 {
+  color: #3edcff;
+}
+
 .sentry-panel {
   margin-top: 1.25rem;
   padding-top: 0.75rem;
@@ -217,12 +307,40 @@ h1 {
   color: #aaa;
 }
 
-.harness-help ul {
+.harness-help-intro {
+  margin: 0 0 0.65rem;
+  font-size: 0.7rem;
+  color: #666;
+}
+
+.harness-presets {
   margin: 0;
   padding-left: 1.2rem;
   font-size: 0.75rem;
   color: #888;
-  line-height: 1.6;
+  line-height: 1.75;
+}
+
+.harness-preset {
+  display: inline;
+  text-decoration: none;
+  border-bottom: 1px dashed transparent;
+  transition: border-color 0.12s ease;
+}
+
+.harness-preset code {
+  font-size: 0.7rem;
+  color: #3edcff;
+  cursor: pointer;
+}
+
+.harness-preset:hover code {
+  color: #7aebff;
+}
+
+.harness-preset.is-active code {
+  color: #92dd00;
+  border-bottom: 1px solid rgba(146, 221, 0, 0.45);
 }
 
 .harness-help code {
