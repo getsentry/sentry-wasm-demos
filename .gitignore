@@ -1,14 +1,28 @@
+# Built wasm/js per backend
+web/assets/emscripten-raycast/*
+!web/assets/emscripten-raycast/.gitkeep
+web/assets/emscripten-opengl/*
+!web/assets/emscripten-opengl/.gitkeep
+web/assets/rust/*
+!web/assets/rust/.gitkeep
+
+# Legacy flat output (pre backends/ reorg)
 web/maze.js
 web/maze.wasm
 web/maze.nosym.js
 web/maze.nosym.wasm
 web/maze.v*.js
 web/maze.v*.wasm
+web/maze.debug.wasm
+
+# Web bundle + secrets
 web/node_modules/
 web/app.js
 web/app.js.map
-web/maze.debug.wasm
 web/.env
 web/package-lock.json
+
+# Native build scratch
 *.o
 *.d
+backends/rust/target/

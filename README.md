@@ -1,19 +1,47 @@
-# Raycaster Maze (Emscripten)
+# WASM demos · Sentry
 
-C++17 raycaster → WebAssembly. JavaScript draws the pixel buffer on a `<canvas>`. Integrated with `@sentry/browser` + `@sentry/wasm`.
+Multi-backend harness for testing `@sentry/browser` + `@sentry/wasm` across toolchains.
+
+**Live today:** Emscripten CPU raycast maze  
+**Planned:** Emscripten WebGL, Rust (wasm-bindgen)
+
+Same web page, same Sentry test buttons — swap WASM backend via URL.
+
+## Repo layout
+
+```text
+backends/
+  emscripten-raycast/   C++ CPU raycast → web/assets/emscripten-raycast/
+  emscripten-opengl/    WebGL stub (README only)
+  rust/                 wasm-bindgen stub (README only)
+web/
+  harness/              config, loaders, sentry test helpers
+  backends/             per-backend JS runners
+  assets/               built .js / .wasm per backend
+  index.html            shared shell + Sentry panel
+```
 
 ## Build & run
 
+For **all harness URL paths** (`?symbols=0`, `?load=…`, default), build **both** variants:
+
 ```bash
 source /path/to/emsdk/emsdk_env.sh
-make
+make clean && make && make symbols && make no-symbols
 cd web && npm install && npm run build:js && cd ..
 python3 -m http.server 8080
 ```
 
+| Build target | Artifacts | Used when |
+| --- | --- | --- |
+| `make` + `make symbols` | `maze.js`, `maze.wasm`, `maze.debug.wasm` | Default `/web/`, `?symbols=1`, Sentry upload |
+| `make no-symbols` | `maze.nosym.js`, `maze.nosym.wasm` | `?symbols=0` only |
+
+Without `make no-symbols`, `?symbols=0` 404s on `maze.nosym.js`. Without `make symbols`, default path runs but Sentry has no debug file to upload.
+
 Open [http://localhost:8080/web/](http://localhost:8080/web/). Hard-refresh after rebuilds.
 
-### Sentry config (not in HTML)
+### Sentry config
 
 ```bash
 cd web
@@ -21,83 +49,133 @@ cp .env.example .env   # SENTRY_DSN + sentry-cli vars
 npm run build:js
 ```
 
-`web/.env`, `web/app.js`, Emscripten outputs (`web/maze.js`, `web/maze.wasm`, `web/maze.nosym.*`), and `web/maze.debug.wasm` are gitignored.
+Gitignored: `web/.env`, `web/app.js`, `web/assets/*/*` build artifacts (`.gitkeep` tracked), legacy `web/maze.*`.
 
-C++ build uses `-g`, `-O2`, `-Wl,--build-id`, and `-fno-optimize-sibling-calls` (keeps the deep crash stack from collapsing at `-O2`).
+## End-to-end workflow (copy-paste)
 
-## Build variants
+One session from zero to a Sentry test crash. Run each block in order.
 
-Two Emscripten outputs for comparing Sentry symbolication:
+```bash
+source ~/dev/emsdk/emsdk_env.sh
+cd /path/to/sentry-wasm-emscripten
+```
 
-| Target | Output | `-g` | Sentry stacks |
+```bash
+make clean && make && make symbols && make no-symbols
+```
+
+`make symbols` runs `wasm-split --strip`, which moves DWARF from `maze.wasm` into `maze.debug.wasm`. Re-running split on an already-stripped wasm produces a useless debug file — `make clean` forces a fresh `-g` build first. Healthy sizes: `maze.wasm` ~26 KB, `maze.debug.wasm` ~184 KB.
+
+`make no-symbols` is a **separate** build (no `-g`) for `?symbols=0`. `make clean` deletes both `maze.*` and `maze.nosym.*` — always re-run **both** targets after clean.
+
+```bash
+set -a && source web/.env && set +a
+sentry-cli debug-files upload -t wasm web/assets/emscripten-raycast/maze.debug.wasm
+```
+
+For **source code snippets** in the Sentry UI (not just file:line in the stack), add `--include-sources` — paths must match the DWARF paths on disk (build and upload on the same machine):
+
+```bash
+set -a && source web/.env && set +a
+sentry-cli debug-files upload -t wasm --include-sources web/assets/emscripten-raycast/maze.debug.wasm
+```
+
+Optional: `--wait` blocks until Sentry finishes processing (slower, but surfaces upload errors immediately).
+
+Requires `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` in `web/.env` (see `.env.example`).  
+`sentry-cli` does not read `.env` automatically — `source` exports the vars for that shell.
+
+```bash
+cd web
+npm install
+npm run build:js
+cd ..
+```
+
+Requires `SENTRY_DSN` in `web/.env` for events to reach Sentry.
+
+```bash
+python3 -m http.server 8080
+```
+
+Open [http://localhost:8080/web/](http://localhost:8080/web/) (no query params). Hard-refresh after rebuilds. Click **WASM deep crash**.
+
+Re-run `make clean && make && make symbols && make no-symbols` and upload after any C++ change (`debug_id` changes per build).
+
+## Harness URL params
+
+Requires **`make symbols`** for default / `?symbols=1`, and **`make no-symbols`** for `?symbols=0`. See [Build & run](#build--run).
+
+| Param | Values | Default | Needs |
 | --- | --- | --- | --- |
-| `make` (default) | `web/maze.js` + `web/maze.wasm` | yes | `chaos_deep*.cpp` after `make symbols` + upload |
-| `make no-symbols` | `web/maze.nosym.js` + `web/maze.nosym.wasm` | no | wasm offsets / function names only |
+| `backend` | `emscripten-raycast`, `emscripten-opengl`, `rust` | `emscripten-raycast` | backend build (raycast only today) |
+| `load` | `streaming`, `instantiate`, `default` | `streaming` | `maze.*` or `maze.nosym.*` per `symbols` |
+| `symbols` | `1` / `0` | `1` | `make symbols` / `make no-symbols` |
 
-**Symbolicated (default):** `make && make symbols`, upload `maze.debug.wasm`, keep `maze.js` in `index.html` and `maze.wasm` as `WASM_URL` in `main.js`.
+Examples:
 
-**Unsymbolicated test:** `make no-symbols`, point web at `maze.nosym.js` + `maze.nosym.wasm`. Hard-refresh, trigger **WASM divzero** or **WASM deep crash**. No `make symbols` or `sentry-cli upload` for this path — without `-g` there is no DWARF in the WASM, so `wasm-split` has nothing to extract and Sentry has no C++ line info to resolve even if you upload.
+- [http://localhost:8080/web/?load=instantiate](http://localhost:8080/web/?load=instantiate)
+- [http://localhost:8080/web/?symbols=0](http://localhost:8080/web/?symbols=0)
+- [http://localhost:8080/web/?backend=rust](http://localhost:8080/web/?backend=rust) (stub)
 
-Switch back to the default paths when done testing.
+## Build variants (emscripten-raycast)
 
-## Debug symbols (`make symbols`)
-
-Applies to the default `make` build only (`-g` embeds DWARF). The `make no-symbols` output has no debug info to split.
-
-Requires [wasm-split](https://github.com/getsentry/symbolicator/tree/master/crates/wasm-split) from Symbolicator:
-
-```bash
-cargo install wasm-split --git https://github.com/getsentry/symbolicator.git wasm-split
-```
-
-Then:
+Run **both** after `make clean` so every harness URL works:
 
 ```bash
-make symbols
+make clean && make && make symbols && make no-symbols
 ```
 
-(`make symbols` rebuilds `maze.wasm` with `-g` and `-Wl,--build-id`, then splits debug info.)
+| Target | Output | `-g` | Harness / Sentry |
+| --- | --- | --- | --- |
+| `make` + `make symbols` | `maze.js`, `maze.wasm`, `maze.debug.wasm` | yes | Default `/web/`, all `?load=` modes with `symbols=1`; upload debug wasm for Sentry file:line |
+| `make no-symbols` | `maze.nosym.js`, `maze.nosym.wasm` | no | `?symbols=0` only — wasm offsets in console and Sentry |
 
-This runs `wasm-split web/maze.wasm -d web/maze.debug.wasm --strip` and prints the `sentry-cli` upload command.
+C++ flags: `-g`, `-O2`, `-Wl,--build-id`, `-fno-optimize-sibling-calls`.
 
-Upload (set `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` in `web/.env`):
+## Debug symbols
+
+Always build from a clean fat wasm before splitting:
 
 ```bash
-sentry-cli debug-files upload -t wasm web/maze.debug.wasm
+make clean && make && make symbols && make no-symbols
+set -a && source web/.env && set +a
+sentry-cli debug-files upload -t wasm web/assets/emscripten-raycast/maze.debug.wasm
 ```
+
+With source bundles (Sentry UI code snippet panel — reads `.cpp` paths from debug info on your filesystem):
+
+```bash
+make clean && make && make symbols && make no-symbols
+set -a && source web/.env && set +a
+sentry-cli debug-files upload -t wasm --include-sources web/assets/emscripten-raycast/maze.debug.wasm
+```
+
+Requires [wasm-split](https://github.com/getsentry/symbolicator/tree/master/crates/wasm-split).
+
+Upload success looks like: `UPLOADED ... (maze.debug.wasm; wasm32 library)`.
 
 ## Verify symbolication
 
-1. Set `SENTRY_DSN` in `web/.env`, run `npm run build:js`
-2. Set `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` in `web/.env`
-3. `make && make symbols` — upload `web/maze.debug.wasm` with sentry-cli
-4. Serve: `python3 -m http.server 8080` → open `/web/`
-5. Click **WASM divzero** or **WASM deep crash**
+1. `SENTRY_DSN` in `web/.env`, `npm run build:js`
+2. `make clean && make && make symbols && make no-symbols`, upload debug wasm (with `source web/.env` — see above)
+3. Open `/web/` (not `?symbols=0`, not `?load=instantiate`), click **WASM deep crash**
 
-In the Sentry issue, expect:
+In the Sentry issue, check:
 
-- `debug_meta.images[0].type === 'wasm'`
-- `code_file` matches `http://localhost:8080/web/maze.wasm` (your serve URL)
-- `code_id` / `debug_id` present (from `--build-id`)
-- WASM frame with `addr_mode: "rel:0"`, `platform: "native"`
-- After processing: symbolicated to `cpp/chaos/chaos_deep1.cpp`, etc.
+- `debug_meta.images[0].debug_status` → `found`
+- WASM frames with `addr_mode`, function names like `chaos_deep1`
 
-**Test buttons:**
+**What to expect today:** upload + SDK usually give **function names** (`chaos_deep1`, `trigger_crash_deep`) at `maze.wasm`. **C++ file:line** (`chaos_deep1.cpp:42`) may not appear — the split debug file often has symbols but not line-level DWARF (`has_debug_info: false` in issue JSON). That is a build/debug-artifact limitation, not a failed upload.
 
-| Button | Action |
-| --- | --- |
-| Report test error | JS `captureException` — pipeline sanity check |
-| WASM divzero | `trigger_crash_divzero()` — integer divide by zero |
-| WASM deep crash | `deep5→…→deep1` then divide by zero — stack depth test |
+Use default URL `/web/` with badge `symbols=on` · `load=streaming` for symbolication checks.
 
-## Files
+## Adding a backend
 
-| File | Role |
-| --- | --- |
-| `cpp/chaos/` | Intentional wasm crashes for Sentry testing |
-| `web/sentry-init.js` | `Sentry.init` + `wasmIntegration()` |
-| `web/build-js.mjs` | Bundles JS; injects `SENTRY_DSN` from `.env` |
-| `web/maze.debug.wasm` | Debug split module for symbol upload (`make symbols`) |
+1. Implement under `backends/<name>/`, output to `web/assets/<name>/`
+2. Add runner in `web/backends/<name>.js` exporting `start(config)`
+3. Register in `web/harness/config.js`
+4. Reuse `web/harness/sentry-tests.js` for crash buttons
 
 ## Controls
 

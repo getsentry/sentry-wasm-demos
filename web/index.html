@@ -3,12 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Raycaster Maze (Emscripten)</title>
+    <title>WASM demos · Sentry</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <main>
       <h1>Raycaster Maze</h1>
+      <p id="backend-badge" class="backend-badge" aria-live="polite"></p>
       <p id="hud">WASD move, arrows turn — collect keys, reach the exit</p>
       <div class="canvas-wrap">
         <canvas id="screen" width="640" height="480"></canvas>
@@ -34,9 +35,18 @@
         </div>
         <p id="sentry-feedback" class="sentry-feedback" aria-live="polite"></p>
       </section>
+
+      <section class="harness-help" aria-labelledby="harness-help-title">
+        <h2 id="harness-help-title">Harness URL params</h2>
+        <ul>
+          <li><code>?backend=emscripten-raycast</code> (default) · CPU pixel buffer</li>
+          <li><code>?backend=emscripten-opengl</code> · WebGL (stub)</li>
+          <li><code>?backend=rust</code> · wasm-bindgen (stub)</li>
+          <li><code>?load=streaming|instantiate|default</code></li>
+          <li><code>?symbols=0</code> · use <code>maze.nosym.*</code> build</li>
+        </ul>
+      </section>
     </main>
-    <!-- <script src="maze.js"></script> -->
-    <script src="maze.nosym.js"></script>
     <script type="module" src="app.js"></script>
   </body>
 </html>
