@@ -1,0 +1,6 @@
+[target.wasm32-unknown-unknown]
+rustflags = [
+  "-C", "link-arg=--build-id",
+  "-C", "debuginfo=2",
+  "-C", "force-frame-pointers=yes",
+]

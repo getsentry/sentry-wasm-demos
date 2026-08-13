@@ -1,12 +1,33 @@
 /** @typedef {'emscripten-raycast' | 'emscripten-opengl' | 'rust'} BackendId */
 /** @typedef {'streaming' | 'instantiate' | 'default'} LoadMode */
+/** @typedef {'emscripten' | 'wasm-bindgen'} BackendLoader */
 
+/**
+ * @typedef {object} BackendConfig
+ * @property {BackendId} id
+ * @property {string} label
+ * @property {string} assetDir
+ * @property {string | null} glueGlobal
+ * @property {BackendLoader} loader
+ * @property {(symbols: boolean) => { glueScript: string, wasmRel: string }} resolveAssets
+ * @property {() => Promise<{ start: Function }>} runner
+ */
+
+/** @type {Record<BackendId, BackendConfig>} */
 const BACKENDS = {
   'emscripten-raycast': {
     id: 'emscripten-raycast',
     label: 'Emscripten · CPU raycast',
     assetDir: 'assets/emscripten-raycast',
     glueGlobal: 'createMazeModule',
+    loader: 'emscripten',
+    resolveAssets(symbols) {
+      const base = symbols ? 'maze' : 'maze.nosym';
+      return {
+        glueScript: `${this.assetDir}/${base}.js`,
+        wasmRel: `${this.assetDir}/${base}.wasm`,
+      };
+    },
     runner: () => import('../backends/emscripten-raycast.js'),
   },
   'emscripten-opengl': {
@@ -14,13 +35,29 @@ const BACKENDS = {
     label: 'Emscripten · WebGL (planned)',
     assetDir: 'assets/emscripten-opengl',
     glueGlobal: 'createMazeModule',
+    loader: 'emscripten',
+    resolveAssets(symbols) {
+      const base = symbols ? 'maze' : 'maze.nosym';
+      return {
+        glueScript: `${this.assetDir}/${base}.js`,
+        wasmRel: `${this.assetDir}/${base}.wasm`,
+      };
+    },
     runner: () => import('../backends/emscripten-opengl.js'),
   },
   rust: {
     id: 'rust',
-    label: 'Rust · wasm-bindgen (planned)',
+    label: 'Rust · wasm-bindgen',
     assetDir: 'assets/rust',
     glueGlobal: null,
+    loader: 'wasm-bindgen',
+    resolveAssets(symbols) {
+      const base = symbols ? 'demo' : 'demo_nosym';
+      return {
+        glueScript: `${this.assetDir}/${base}.js`,
+        wasmRel: `${this.assetDir}/${base}_bg.wasm`,
+      };
+    },
     runner: () => import('../backends/rust.js'),
   },
 };
@@ -96,17 +133,17 @@ export function getHarnessConfig() {
       return `Unknown load mode ${JSON.stringify(value)}.\nTry ?load=streaming, ?load=instantiate, or ?load=default.`;
     }) || 'streaming';
 
-  const baseName = symbols ? 'maze' : 'maze.nosym';
-  const wasmRel = `${backend.assetDir}/${baseName}.wasm`;
+  const assets = backend.resolveAssets(symbols);
 
   return {
     backendId: backend.id,
     backendLabel: backend.label,
+    loader: backend.loader,
     load,
     symbols,
     glueGlobal: backend.glueGlobal,
-    glueScript: `${backend.assetDir}/${baseName}.js`,
-    wasmUrl: new URL(wasmRel, window.location.href).href,
+    glueScript: assets.glueScript,
+    wasmUrl: new URL(assets.wasmRel, window.location.href).href,
     startRunner: backend.runner,
   };
 }

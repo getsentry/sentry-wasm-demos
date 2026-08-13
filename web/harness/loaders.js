@@ -1,4 +1,32 @@
 /**
+ * Load a wasm-bindgen ES module glue file.
+ * @param {string} glueScript pathname relative to /web/
+ */
+export async function importBindgenGlue(glueScript) {
+  const url = new URL(glueScript, window.location.href).href;
+  return import(/* webpackIgnore: true */ url);
+}
+
+/**
+ * @param {object} options
+ * @param {(module_or_path?: unknown) => Promise<unknown>} options.init wasm-bindgen default export
+ * @param {string} options.wasmUrl
+ * @param {'streaming' | 'instantiate' | 'default'} options.load
+ */
+export async function loadWasmBindgenModule({ init, wasmUrl, load }) {
+  if (load === 'default') {
+    return init(wasmUrl);
+  }
+
+  if (load === 'instantiate') {
+    const bytes = await fetch(wasmUrl).then(response => response.arrayBuffer());
+    return init(bytes);
+  }
+
+  return init(fetch(wasmUrl));
+}
+
+/**
  * WASM load paths for Emscripten backends.
  * @sentry/wasm hooks *Streaming; other modes are for SDK gap testing.
  */
@@ -70,8 +98,8 @@ export function loadGlueScript(src) {
     script.dataset.wasmGlue = url;
     script.onload = () => resolve(undefined);
     script.onerror = () => {
-      const nosymHint = src.includes('.nosym.')
-        ? ' Build with `make no-symbols`, or open /web/ without ?symbols=0.'
+      const nosymHint = src.includes('_nosym') || src.includes('.nosym.')
+        ? ' Run `make no-symbols` (Emscripten) or `make rust-no-symbols` (Rust), or drop ?symbols=0.'
         : '';
       reject(new Error(`Failed to load WASM glue: ${url}.${nosymHint}`));
     };

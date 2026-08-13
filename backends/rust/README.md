@@ -1,20 +1,40 @@
-# Rust · wasm-bindgen (planned)
+# Rust backend (wasm-bindgen)
 
-Minimal Rust WASM backend to test `@sentry/wasm` outside Emscripten (different glue, load paths, stack formatting).
+Crash-only demo: `trigger_crash_divzero`, `trigger_crash_deep`, `ping`.
 
-## Goal
+## Build
 
-- Export the same crash contract: `trigger_crash_divzero`, `trigger_crash_deep`
-- Embed `build_id` for Sentry `debug_id`
-- Output to `web/assets/rust/` (`tiny.js` + `tiny.wasm` or wasm-bindgen names)
-- Select with `?backend=rust`
+```bash
+make -C backends/rust clean && make -C backends/rust all && make -C backends/rust symbols
+```
 
-## Stub status
+Or from repo root: `make rust && make rust-symbols`.
 
-Implement `web/backends/rust.js` runner + this crate; harness already routes by `?backend=rust`.
+- **`demo.js` + `demo_bg.wasm`** — browser bundle (stripped after `symbols`)
+- **`demo.debug.wasm`** — upload to Sentry (DWARF + line tables)
 
-## Suggested first steps
+`wasm-pack` output must be used for the browser (wasm-bindgen import layout). Enable `dwarf-debug-info = true` in `Cargo.toml` so DWARF survives bindgen, then `wasm-split` extracts it into `demo.debug.wasm`.
 
-1. `cargo init --lib` in this directory
-2. `wasm-bindgen` exports + `wasm-pack build --target web`
-3. Copy chaos pattern from `../emscripten-raycast/src/chaos/`
+## Symbolication
+
+Dev build embeds full debug info (`debug = 2`, `-C debuginfo=2`).
+
+After any Rust or debug-flag change:
+
+```bash
+make -C backends/rust clean && make rust && make rust-symbols
+set -a && source web/.env && set +a
+sentry-cli debug-files upload -t wasm --include-sources web/assets/rust/demo.debug.wasm
+```
+
+Re-upload after every build (`debug_id` changes). Trigger a **new** issue after upload.
+
+Check issue JSON: `has_debug_info: true` and/or `has_sources: true` when line info and source panel work.
+
+## No-symbols variant
+
+```bash
+make -C backends/rust no-symbols
+```
+
+Open with `?backend=rust&symbols=0`.

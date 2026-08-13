@@ -2,8 +2,8 @@
 
 Multi-backend harness for testing `@sentry/browser` + `@sentry/wasm` across toolchains.
 
-**Live today:** Emscripten CPU raycast maze  
-**Planned:** Emscripten WebGL, Rust (wasm-bindgen)
+**Live today:** Emscripten CPU raycast maze · Rust wasm-bindgen crashes  
+**Planned:** Emscripten WebGL
 
 Same web page, same Sentry test buttons — swap WASM backend via URL.
 
@@ -13,7 +13,7 @@ Same web page, same Sentry test buttons — swap WASM backend via URL.
 backends/
   emscripten-raycast/   C++ CPU raycast → web/assets/emscripten-raycast/
   emscripten-opengl/    WebGL stub (README only)
-  rust/                 wasm-bindgen stub (README only)
+  rust/                 wasm-bindgen crash demo → web/assets/rust/
 web/
   harness/              config, loaders, sentry test helpers
   backends/             per-backend JS runners
@@ -124,7 +124,7 @@ Examples (use **`&`** between params, one value each — not `|`):
 
 - [http://localhost:8080/web/?load=instantiate](http://localhost:8080/web/?load=instantiate)
 - [http://localhost:8080/web/?symbols=0](http://localhost:8080/web/?symbols=0)
-- [http://localhost:8080/web/?backend=rust](http://localhost:8080/web/?backend=rust) (stub)
+- [http://localhost:8080/web/?backend=rust](http://localhost:8080/web/?backend=rust)
 
 Invalid values (e.g. `?load=streaming|instantiate|default`) fail fast with a red error under the canvas instead of loading silently.
 
@@ -234,4 +234,71 @@ cd web && npm run build:js && cd ..
 
 → re-upload required (`debug_id` changes every wasm build)
 
+**Changed Rust**
+
+```bash
+make -C backends/rust clean && make rust && make rust-symbols && make rust-no-symbols
+set -a && source web/.env && set +a
+sentry-cli debug-files upload -t wasm --include-sources web/assets/rust/demo.debug.wasm
+cd web && npm run build:js && cd ..
+```
+
+→ open `?backend=rust` · re-upload required (`debug_id` changes every wasm build)
+
 **README only** — nothing to rebuild
+
+## End-to-end workflow · Rust (copy-paste)
+
+Same steps as [Emscripten workflow](#end-to-end-workflow-copy-paste) — different toolchain, build, upload, and URL.
+
+**One-time setup**
+
+```bash
+# Install Rust if needed: https://rustup.rs
+rustup target add wasm32-unknown-unknown
+cargo install wasm-pack
+# Same as Emscripten — splits DWARF for Sentry upload
+cargo install wasm-split --git https://github.com/getsentry/symbolicator.git wasm-split
+```
+
+**Step 1.** Repo root
+
+```bash
+cd /path/to/sentry-wasm-emscripten
+```
+
+**Step 2.** Build wasm
+
+```bash
+make -C backends/rust clean && make rust && make rust-symbols && make rust-no-symbols
+```
+
+`make rust-symbols` runs `wasm-split --strip` (same as Emscripten): DWARF moves into `demo.debug.wasm`, browser loads stripped `demo_bg.wasm`. Requires `dwarf-debug-info = true` in `Cargo.toml` so bindgen keeps DWARF. Upload **`demo.debug.wasm`**, not `demo_bg.wasm`.
+
+**Step 3.** Upload debug wasm + sources (skip for local-only)
+
+```bash
+set -a && source web/.env && set +a
+sentry-cli debug-files upload -t wasm --include-sources web/assets/rust/demo.debug.wasm
+```
+
+**Step 4.** Bundle JS
+
+```bash
+cd web
+npm install
+npm run build:js
+cd ..
+```
+
+**Step 5.** Serve
+
+```bash
+python3 -m http.server 8080
+```
+
+Open [http://localhost:8080/web/?backend=rust](http://localhost:8080/web/?backend=rust). Hard-refresh. Click **WASM deep crash**.
+
+Re-run step **2** and step **3** after any Rust change.
+
+Dev build uses `debug = 2` + `-C debuginfo=2` for line tables — run **`make -C backends/rust clean`** before rebuild when changing debug flags.
