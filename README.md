@@ -21,6 +21,8 @@ web/
   index.html            shared shell + Sentry panel
 ```
 
+
+
 ## Build & run
 
 For **all harness URL paths** (`?symbols=0`, `?load=…`, default), build **both** variants:
@@ -32,10 +34,12 @@ cd web && npm install && npm run build:js && cd ..
 python3 -m http.server 8080
 ```
 
-| Build target | Artifacts | Used when |
-| --- | --- | --- |
+
+| Build target            | Artifacts                                 | Used when                                    |
+| ----------------------- | ----------------------------------------- | -------------------------------------------- |
 | `make` + `make symbols` | `maze.js`, `maze.wasm`, `maze.debug.wasm` | Default `/web/`, `?symbols=1`, Sentry upload |
-| `make no-symbols` | `maze.nosym.js`, `maze.nosym.wasm` | `?symbols=0` only |
+| `make no-symbols`       | `maze.nosym.js`, `maze.nosym.wasm`        | `?symbols=0` only                            |
+
 
 Without `make no-symbols`, `?symbols=0` 404s on `maze.nosym.js`. Without `make symbols`, default path runs but Sentry has no debug file to upload.
 
@@ -70,7 +74,7 @@ make clean && make && make symbols && make no-symbols
 
 `make symbols` runs `wasm-split --strip`, which moves DWARF from `maze.wasm` into `maze.debug.wasm`. Re-running split on an already-stripped wasm produces a useless debug file — `make clean` forces a fresh `-g` build first. Healthy sizes: `maze.wasm` ~26 KB, `maze.debug.wasm` ~184 KB.
 
-`make no-symbols` is a **separate** build (no `-g`) for `?symbols=0`. `make clean` deletes both `maze.*` and `maze.nosym.*` — always re-run **both** targets after clean.
+`make no-symbols` is a **separate** build (no `-g`) for `?symbols=0`. `make clean` deletes both `maze.`* and `maze.nosym.*` — always re-run **both** targets after clean.
 
 **Step 3.** Upload debug wasm to Sentry (skip for local-only play)
 
@@ -112,15 +116,17 @@ Re-run step **2** and step **3** after any C++ change (`debug_id` changes per bu
 
 ## Harness URL params
 
-Requires **`make symbols`** for default / `?symbols=1`, and **`make no-symbols`** for `?symbols=0`. See [Build & run](#build--run).
+Requires `make symbols` for default / `?symbols=1`, and `make no-symbols` for `?symbols=0`. See [Build & run](#build--run).
 
-| Param | Values | Default | Needs |
-| --- | --- | --- | --- |
-| `backend` | `emscripten-raycast`, `emscripten-opengl`, `rust` | `emscripten-raycast` | backend build (raycast only today) |
-| `load` | `streaming`, `instantiate`, `default` | `streaming` | `maze.*` or `maze.nosym.*` per `symbols` |
-| `symbols` | `1` / `0` | `1` | `make symbols` / `make no-symbols` |
 
-Examples (use **`&`** between params, one value each — not `|`):
+| Param     | Values                                            | Default              | Needs                                    |
+| --------- | ------------------------------------------------- | -------------------- | ---------------------------------------- |
+| `backend` | `emscripten-raycast`, `emscripten-opengl`, `rust` | `emscripten-raycast` | backend build (raycast only today)       |
+| `load`    | `streaming`, `instantiate`, `default`             | `streaming`          | `maze.*` or `maze.nosym.*` per `symbols` |
+| `symbols` | `1` / `0`                                         | `1`                  | `make symbols` / `make no-symbols`       |
+
+
+Examples (use `&` between params, one value each — not `|`):
 
 - [http://localhost:8080/web/?load=instantiate](http://localhost:8080/web/?load=instantiate)
 - [http://localhost:8080/web/?symbols=0](http://localhost:8080/web/?symbols=0)
@@ -136,10 +142,12 @@ Run **both** after `make clean` so every harness URL works:
 make clean && make && make symbols && make no-symbols
 ```
 
-| Target | Output | `-g` | Harness / Sentry |
-| --- | --- | --- | --- |
-| `make` + `make symbols` | `maze.js`, `maze.wasm`, `maze.debug.wasm` | yes | Default `/web/`, all `?load=` modes with `symbols=1`; upload debug wasm for Sentry file:line |
-| `make no-symbols` | `maze.nosym.js`, `maze.nosym.wasm` | no | `?symbols=0` only — wasm offsets in console and Sentry |
+
+| Target                  | Output                                    | `-g` | Harness / Sentry                                                                             |
+| ----------------------- | ----------------------------------------- | ---- | -------------------------------------------------------------------------------------------- |
+| `make` + `make symbols` | `maze.js`, `maze.wasm`, `maze.debug.wasm` | yes  | Default `/web/`, all `?load=` modes with `symbols=1`; upload debug wasm for Sentry file:line |
+| `make no-symbols`       | `maze.nosym.js`, `maze.nosym.wasm`        | no   | `?symbols=0` only — wasm offsets in console and Sentry                                       |
+
 
 C++ flags: `-g`, `-O2`, `-Wl,--build-id`, `-fno-optimize-sibling-calls`.
 
@@ -187,6 +195,8 @@ Use default URL `/web/` with badge `symbols=on` · `load=streaming` for symbolic
 3. Register in `web/harness/config.js`
 4. Reuse `web/harness/sentry-tests.js` for crash buttons
 
+
+
 ## Controls
 
 WASD or arrows. Collect all keys, exit bottom-right.
@@ -201,7 +211,7 @@ cd web && npm run build:js && cd ..
 python3 -m http.server 8080
 ```
 
-→ http://localhost:8080/web/ · hard-refresh after rebuilds
+→ [http://localhost:8080/web/](http://localhost:8080/web/) · hard-refresh after rebuilds
 
 **Test Sentry stacks** — full local run **and** send the debug map to Sentry so issues show symbolicated wasm frames (`chaos_deep1`, etc.)
 
@@ -273,7 +283,7 @@ cd /path/to/sentry-wasm-emscripten
 make -C backends/rust clean && make rust && make rust-symbols && make rust-no-symbols
 ```
 
-`make rust-symbols` runs `wasm-split --strip` (same as Emscripten): DWARF moves into `demo.debug.wasm`, browser loads stripped `demo_bg.wasm`. Requires `dwarf-debug-info = true` in `Cargo.toml` so bindgen keeps DWARF. Upload **`demo.debug.wasm`**, not `demo_bg.wasm`.
+`make rust-symbols` runs `wasm-split --strip` (same as Emscripten): DWARF moves into `demo.debug.wasm`, browser loads stripped `demo_bg.wasm`. Requires `dwarf-debug-info = true` in `Cargo.toml` so bindgen keeps DWARF. Upload `demo.debug.wasm`, not `demo_bg.wasm`.
 
 **Step 3.** Upload debug wasm + sources (skip for local-only)
 
@@ -301,4 +311,4 @@ Open [http://localhost:8080/web/?backend=rust](http://localhost:8080/web/?backen
 
 Re-run step **2** and step **3** after any Rust change.
 
-Dev build uses `debug = 2` + `-C debuginfo=2` for line tables — run **`make -C backends/rust clean`** before rebuild when changing debug flags.
+Dev build uses `debug = 2` + `-C debuginfo=2` for line tables — run `make -C backends/rust clean` before rebuild when changing debug flags.

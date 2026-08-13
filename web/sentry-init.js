@@ -14,6 +14,15 @@ if (!sentryDsnSet) {
     tracesSampleRate: 0,
     environment: 'demo',
     release: 'wasm-maze-demo@dev',
+    beforeSend(event) {
+      const crash = event.contexts?.wasm_crash;
+      const primary = event.exception?.values?.[0];
+      if (crash?.language && crash?.crash_type && primary) {
+        primary.type = crash.language;
+        primary.value = crash.crash_type;
+      }
+      return event;
+    },
   });
   console.log('[sentry] initialized');
 }

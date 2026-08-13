@@ -1,4 +1,5 @@
-import { Sentry, sentryDsnSet } from '../sentry-init.js';
+import { captureHarnessException } from './sentry-context.js';
+import { sentryDsnSet } from '../sentry-init.js';
 
 /**
  * @param {object} mod wasm module instance (Emscripten Module object)
@@ -28,7 +29,8 @@ export function callWasmCrash(mod, exportName, label) {
   } catch (err) {
     console.error('[wasm crash]', err);
     console.error('[wasm crash stack]\n', err.stack);
-    Sentry.captureException(err);
+    const crashType = exportName === 'trigger_crash_deep' ? 'deep_stack' : 'divzero';
+    captureHarnessException(err, crashType);
     showFeedback(
       sentryDsnSet
         ? `${label}: ${err.message} — sent to Sentry.`
@@ -41,7 +43,7 @@ export function wireSentryTestButtons(getModule) {
   document.getElementById('report-js-error')?.addEventListener('click', () => {
     const feedback = document.getElementById('sentry-feedback');
     const err = new Error('js test');
-    Sentry.captureException(err);
+    captureHarnessException(err, 'js_test');
     const message = sentryDsnSet
       ? 'Sent JS test error to Sentry — check Issues.'
       : 'captureException called — no DSN in build.';

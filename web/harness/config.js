@@ -1,11 +1,13 @@
 /** @typedef {'emscripten-raycast' | 'emscripten-opengl' | 'rust'} BackendId */
 /** @typedef {'streaming' | 'instantiate' | 'default'} LoadMode */
 /** @typedef {'emscripten' | 'wasm-bindgen'} BackendLoader */
+/** @typedef {'cpp' | 'rust'} BackendLanguage */
 
 /**
  * @typedef {object} BackendConfig
  * @property {BackendId} id
  * @property {string} label
+ * @property {BackendLanguage} language
  * @property {string} assetDir
  * @property {string | null} glueGlobal
  * @property {BackendLoader} loader
@@ -18,6 +20,7 @@ const BACKENDS = {
   'emscripten-raycast': {
     id: 'emscripten-raycast',
     label: 'Emscripten · CPU raycast',
+    language: 'cpp',
     assetDir: 'assets/emscripten-raycast',
     glueGlobal: 'createMazeModule',
     loader: 'emscripten',
@@ -33,6 +36,7 @@ const BACKENDS = {
   'emscripten-opengl': {
     id: 'emscripten-opengl',
     label: 'Emscripten · WebGL (planned)',
+    language: 'cpp',
     assetDir: 'assets/emscripten-opengl',
     glueGlobal: 'createMazeModule',
     loader: 'emscripten',
@@ -48,6 +52,7 @@ const BACKENDS = {
   rust: {
     id: 'rust',
     label: 'Rust · wasm-bindgen',
+    language: 'rust',
     assetDir: 'assets/rust',
     glueGlobal: null,
     loader: 'wasm-bindgen',
@@ -138,6 +143,7 @@ export function getHarnessConfig() {
   return {
     backendId: backend.id,
     backendLabel: backend.label,
+    language: backend.language,
     loader: backend.loader,
     load,
     symbols,
@@ -149,5 +155,5 @@ export function getHarnessConfig() {
 }
 
 export function formatHarnessBanner(config) {
-  return `${config.backendLabel} · load=${config.load} · symbols=${config.symbols ? 'on' : 'off'}`;
+  return `${config.backendLabel} · ${config.language} · load=${config.load} · symbols=${config.symbols ? 'on' : 'off'}`;
 }
