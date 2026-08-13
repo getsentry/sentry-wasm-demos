@@ -1,5 +1,9 @@
 web/maze.js
 web/maze.wasm
+web/maze.nosym.js
+web/maze.nosym.wasm
+web/maze.v*.js
+web/maze.v*.wasm
 web/node_modules/
 web/app.js
 web/app.js.map

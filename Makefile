@@ -13,14 +13,15 @@ SRC = cpp/main.cpp cpp/maze.cpp cpp/raycast.cpp cpp/game.cpp cpp/minimap.cpp \
 OUT_JS = web/maze.js
 OUT_WASM = web/maze.wasm
 DEBUG_WASM = web/maze.debug.wasm
+OUT_JS_NO_SYMBOLS = web/maze.nosym.js
+OUT_WASM_NO_SYMBOLS = web/maze.nosym.wasm
 
 EXPORTED_FUNCTIONS = \
 	["_malloc","_free","_init_game","_handle_key","_step_game","_player_key_count",\
 	"_keys_required","_game_won","_get_level","_render_frame","_get_width","_get_height",\
 	"_get_pixel_buffer_ptr","_trigger_crash_divzero","_trigger_crash_deep"]
 
-EMCC_FLAGS = \
-	-g \
+EMCC_FLAGS_COMMON = \
 	-O2 \
 	-fno-optimize-sibling-calls \
 	-Wl,--build-id \
@@ -32,12 +33,28 @@ EMCC_FLAGS = \
 	-s ALLOW_MEMORY_GROWTH=1 \
 	-s ENVIRONMENT=web
 
-.PHONY: all symbols clean
+# Default build: -g embeds DWARF for symbolication (make symbols + sentry-cli upload).
+EMCC_FLAGS = -g $(EMCC_FLAGS_COMMON)
+
+# No -g: no DWARF to split or upload — compare unsymbolicated Sentry stacks.
+EMCC_FLAGS_NO_SYMBOLS = $(EMCC_FLAGS_COMMON)
+
+.PHONY: all no-symbols symbols clean
 
 all: $(OUT_JS)
 
 $(OUT_JS): $(SRC)
 	$(EMCC) $(EMCC_FLAGS) $(SRC) -o $(OUT_JS)
+
+$(OUT_JS_NO_SYMBOLS): $(SRC)
+	$(EMCC) $(EMCC_FLAGS_NO_SYMBOLS) $(SRC) -o $(OUT_JS_NO_SYMBOLS)
+
+no-symbols: $(OUT_JS_NO_SYMBOLS)
+	@echo ""
+	@echo "Built without -g: $(OUT_JS_NO_SYMBOLS) + $(OUT_WASM_NO_SYMBOLS)"
+	@echo "Switch index.html to maze.nosym.js and main.js WASM_URL to maze.nosym.wasm"
+	@echo "Do not run make symbols — no DWARF to upload. Expect wasm offsets in Sentry."
+	@echo ""
 
 symbols: all
 	@test -x "$(WASM_SPLIT)" || ( \
@@ -54,4 +71,4 @@ symbols: all
 	@echo "Set SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT in web/.env (see web/.env.example)."
 
 clean:
-	rm -f $(OUT_JS) $(OUT_WASM) $(DEBUG_WASM)
+	rm -f $(OUT_JS) $(OUT_WASM) $(DEBUG_WASM) $(OUT_JS_NO_SYMBOLS) $(OUT_WASM_NO_SYMBOLS)

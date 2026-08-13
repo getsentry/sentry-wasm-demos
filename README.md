@@ -21,11 +21,28 @@ cp .env.example .env   # SENTRY_DSN + sentry-cli vars
 npm run build:js
 ```
 
-`web/.env`, `web/app.js`, and `web/maze.debug.wasm` are gitignored.
+`web/.env`, `web/app.js`, Emscripten outputs (`web/maze.js`, `web/maze.wasm`, `web/maze.nosym.*`), and `web/maze.debug.wasm` are gitignored.
 
 C++ build uses `-g`, `-O2`, `-Wl,--build-id`, and `-fno-optimize-sibling-calls` (keeps the deep crash stack from collapsing at `-O2`).
 
+## Build variants
+
+Two Emscripten outputs for comparing Sentry symbolication:
+
+| Target | Output | `-g` | Sentry stacks |
+| --- | --- | --- | --- |
+| `make` (default) | `web/maze.js` + `web/maze.wasm` | yes | `chaos_deep*.cpp` after `make symbols` + upload |
+| `make no-symbols` | `web/maze.nosym.js` + `web/maze.nosym.wasm` | no | wasm offsets / function names only |
+
+**Symbolicated (default):** `make && make symbols`, upload `maze.debug.wasm`, keep `maze.js` in `index.html` and `maze.wasm` as `WASM_URL` in `main.js`.
+
+**Unsymbolicated test:** `make no-symbols`, point web at `maze.nosym.js` + `maze.nosym.wasm`. Hard-refresh, trigger **WASM divzero** or **WASM deep crash**. No `make symbols` or `sentry-cli upload` for this path — without `-g` there is no DWARF in the WASM, so `wasm-split` has nothing to extract and Sentry has no C++ line info to resolve even if you upload.
+
+Switch back to the default paths when done testing.
+
 ## Debug symbols (`make symbols`)
+
+Applies to the default `make` build only (`-g` embeds DWARF). The `make no-symbols` output has no debug info to split.
 
 Requires [wasm-split](https://github.com/getsentry/symbolicator/tree/master/crates/wasm-split) from Symbolicator:
 

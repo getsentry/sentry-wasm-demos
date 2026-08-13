@@ -1,17 +1,20 @@
 import { Sentry, sentryDsnSet } from './sentry-init.js';
 
 // =============================================================================
-// PART A — LOAD WASM  (@sentry/wasm hooks instantiateStreaming in sentry-init.js)
+// PART A — LOAD WASM  (@sentry/wasm hooks *Streaming only; active path uses instantiate)
 // =============================================================================
 
 const createMazeModule = globalThis.createMazeModule;
-const WASM_URL = new URL('maze.wasm', import.meta.url).href;
+// const WASM_URL = new URL('maze.wasm', import.meta.url).href;
+// build v2 — symbols intentionally not uploaded and no DWARF debug info embedded in the WASM.
+const WASM_URL = new URL('maze.nosym.wasm', import.meta.url).href;
 
 async function loadWasm() {
   if (typeof createMazeModule !== 'function') {
     throw new Error('maze.js missing — run `make`, then hard-refresh');
   }
 
+  // Custom load (explicit URL via app.js) — commented out to test Emscripten default:
   const mod = await new Promise((resolve, reject) => {
     createMazeModule({
       instantiateWasm(imports, emscriptenReady) {
@@ -26,6 +29,28 @@ async function loadWasm() {
       .then(resolve)
       .catch(reject);
   });
+
+  // Emscripten default: fetch maze.wasm next to maze.js (see maze.js createWasm / findWasmBinary)
+  // const mod = await createMazeModule();
+  // console.log('wasm loaded (emscripten default)', { mod });
+
+  // Unpatched path: WebAssembly.instantiate(bytes) — @sentry/wasm does not hook this API.
+  // const mod = await new Promise((resolve, reject) => {
+  //   createMazeModule({
+  //     instantiateWasm(imports, emscriptenReady) {
+  //       fetch(WASM_URL)
+  //         .then((response) => response.arrayBuffer())
+  //         .then((bytes) => WebAssembly.instantiate(bytes, imports))
+  //         .then(({ instance }) => {
+  //           console.log('wasm loaded (instantiate)', { url: WASM_URL, instance });
+  //           emscriptenReady(instance);
+  //         })
+  //         .catch(reject);
+  //     },
+  //   })
+  //     .then(resolve)
+  //     .catch(reject);
+  // });
 
   return mod;
 }
