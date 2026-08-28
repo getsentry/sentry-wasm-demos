@@ -2,8 +2,7 @@
 
 Multi-backend harness for testing `@sentry/browser` + `@sentry/wasm` across toolchains.
 
-**Live today:** Emscripten CPU raycast maze · Rust wasm-bindgen crashes  
-**Planned:** Emscripten WebGL
+**Live today:** Emscripten CPU raycast maze · Emscripten WebGL 3D maze · Rust wasm-bindgen crashes
 
 Same web page, same Sentry test buttons — swap WASM backend via URL.
 
@@ -12,7 +11,7 @@ Same web page, same Sentry test buttons — swap WASM backend via URL.
 ```text
 backends/
   emscripten-raycast/   C++ CPU raycast → web/assets/emscripten-raycast/
-  emscripten-opengl/    WebGL stub (README only)
+  emscripten-opengl/    WebGL 3D maze → web/assets/emscripten-opengl/
   rust/                 wasm-bindgen crash demo → web/assets/rust/
 web/
   harness/              config, loaders, sentry test helpers
@@ -74,7 +73,7 @@ make clean && make && make symbols && make no-symbols
 
 `make symbols` runs `wasm-split --strip`, which moves DWARF from `maze.wasm` into `maze.debug.wasm`. Re-running split on an already-stripped wasm produces a useless debug file — `make clean` forces a fresh `-g` build first. Healthy sizes: `maze.wasm` ~26 KB, `maze.debug.wasm` ~184 KB.
 
-`make no-symbols` is a **separate** build (no `-g`) for `?symbols=0`. `make clean` deletes both `maze.`* and `maze.nosym.*` — always re-run **both** targets after clean.
+`make no-symbols` compiles with `-g` then **links without** `-g`, so emcc strips DWARF from `maze.nosym.wasm` (`?symbols=0`). `make clean` deletes both `maze.`* and `maze.nosym.*` — always re-run **both** targets after clean.
 
 **Step 3.** Upload debug wasm to Sentry (skip for local-only play)
 
@@ -121,7 +120,7 @@ Requires `make symbols` for default / `?symbols=1`, and `make no-symbols` for `?
 
 | Param     | Values                                            | Default              | Needs                                    |
 | --------- | ------------------------------------------------- | -------------------- | ---------------------------------------- |
-| `backend` | `emscripten-raycast`, `emscripten-opengl`, `rust` | `emscripten-raycast` | backend build (raycast only today)       |
+| `backend` | `emscripten-raycast`, `emscripten-opengl`, `rust` | `emscripten-raycast` | backend build |
 | `load`    | `streaming`, `instantiate`, `default`             | `streaming`          | `maze.*` or `maze.nosym.*` per `symbols` |
 | `symbols` | `1` / `0`                                         | `1`                  | `make symbols` / `make no-symbols`       |
 
@@ -130,6 +129,7 @@ Examples (use `&` between params, one value each — not `|`):
 
 - [http://localhost:8080/web/?load=instantiate](http://localhost:8080/web/?load=instantiate)
 - [http://localhost:8080/web/?symbols=0](http://localhost:8080/web/?symbols=0)
+- [http://localhost:8080/web/?backend=emscripten-opengl](http://localhost:8080/web/?backend=emscripten-opengl)
 - [http://localhost:8080/web/?backend=rust](http://localhost:8080/web/?backend=rust)
 
 Invalid values (e.g. `?load=streaming|instantiate|default`) fail fast with a red error under the canvas instead of loading silently.
@@ -146,10 +146,10 @@ make clean && make && make symbols && make no-symbols
 | Target                  | Output                                    | `-g` | Harness / Sentry                                                                             |
 | ----------------------- | ----------------------------------------- | ---- | -------------------------------------------------------------------------------------------- |
 | `make` + `make symbols` | `maze.js`, `maze.wasm`, `maze.debug.wasm` | yes  | Default `/web/`, all `?load=` modes with `symbols=1`; upload debug wasm for Sentry file:line |
-| `make no-symbols`       | `maze.nosym.js`, `maze.nosym.wasm`        | no   | `?symbols=0` only — wasm offsets in console and Sentry                                       |
+| `make no-symbols`       | `maze.nosym.js`, `maze.nosym.wasm`        | compile only | `?symbols=0` — objects have DWARF, link strips it; wasm offsets in console and Sentry |
 
 
-C++ flags: `-g`, `-O2`, `-Wl,--build-id`, `-fno-optimize-sibling-calls`.
+C++ flags: `-g`, `-O2`, `-Wl,--build-id`, `-fno-optimize-sibling-calls`. `no-symbols` uses `-g` only at compile (`-c`), not at link.
 
 ## Debug symbols
 

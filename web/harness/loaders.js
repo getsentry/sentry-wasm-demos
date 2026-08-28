@@ -36,19 +36,21 @@ export async function loadWasmBindgenModule({ init, wasmUrl, load }) {
  * @param {(...args: unknown[]) => Promise<unknown>} options.createModule
  * @param {string} options.wasmUrl
  * @param {'streaming' | 'instantiate' | 'default'} options.load
+ * @param {Record<string, unknown>} [options.moduleConfig]
  */
-export async function loadEmscriptenModule({ createModule, wasmUrl, load }) {
+export async function loadEmscriptenModule({ createModule, wasmUrl, load, moduleConfig = {} }) {
   if (load !== 'default' && load !== 'instantiate' && load !== 'streaming') {
     throw new Error(`Invalid load mode ${JSON.stringify(load)}`);
   }
 
   if (load === 'default') {
-    return createModule();
+    return createModule(moduleConfig);
   }
 
   if (load === 'instantiate') {
     return new Promise((resolve, reject) => {
       createModule({
+        ...moduleConfig,
         instantiateWasm(imports, emscriptenReady) {
           fetch(wasmUrl)
             .then(response => response.arrayBuffer())
@@ -67,6 +69,7 @@ export async function loadEmscriptenModule({ createModule, wasmUrl, load }) {
 
   return new Promise((resolve, reject) => {
     createModule({
+      ...moduleConfig,
       instantiateWasm(imports, emscriptenReady) {
         WebAssembly.instantiateStreaming(fetch(wasmUrl), imports)
           .then(({ instance }) => {

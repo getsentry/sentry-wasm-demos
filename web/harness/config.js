@@ -35,7 +35,7 @@ const BACKENDS = {
   },
   'emscripten-opengl': {
     id: 'emscripten-opengl',
-    label: 'Emscripten · WebGL (planned)',
+    label: 'Emscripten · WebGL',
     language: 'cpp',
     assetDir: 'assets/emscripten-opengl',
     glueGlobal: 'createMazeModule',
