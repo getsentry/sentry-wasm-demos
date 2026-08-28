@@ -14,7 +14,7 @@ make
 Outputs land in `web/assets/emscripten-raycast/`:
 
 - `maze.js` + `maze.wasm` — symbolicated (`-g`)
-- `maze.nosym.js` + `maze.nosym.wasm` — `make no-symbols`
+- `maze.nosym.js` + `maze.nosym.wasm` — `make no-symbols` (compile `-g`, link without)
 
 ## Source layout
 

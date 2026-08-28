@@ -25,4 +25,6 @@ web/package-lock.json
 # Native build scratch
 *.o
 *.d
+backends/emscripten-raycast/obj/
+backends/emscripten-opengl/obj/
 backends/rust/target/

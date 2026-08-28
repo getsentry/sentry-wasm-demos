@@ -6,12 +6,16 @@ WASM_SPLIT ?= $(shell \
 	else echo wasm-split; fi)
 
 SRC_DIR = src
+OBJ_DIR = obj
 OUT_DIR = ../../web/assets/emscripten-raycast
 
 SRC = $(SRC_DIR)/main.cpp $(SRC_DIR)/maze.cpp $(SRC_DIR)/raycast.cpp $(SRC_DIR)/game.cpp $(SRC_DIR)/minimap.cpp \
 	$(SRC_DIR)/chaos/chaos.cpp $(SRC_DIR)/chaos/chaos_divzero.cpp \
 	$(SRC_DIR)/chaos/chaos_deep1.cpp $(SRC_DIR)/chaos/chaos_deep2.cpp $(SRC_DIR)/chaos/chaos_deep3.cpp \
 	$(SRC_DIR)/chaos/chaos_deep4.cpp $(SRC_DIR)/chaos/chaos_deep5.cpp
+
+# src/foo.cpp and src/chaos/foo.cpp both land in obj/foo.o
+OBJS = $(addprefix $(OBJ_DIR)/,$(notdir $(SRC:.cpp=.o)))
 
 OUT_JS = $(OUT_DIR)/maze.js
 OUT_WASM = $(OUT_DIR)/maze.wasm
@@ -37,7 +41,12 @@ EMCC_FLAGS_COMMON = \
 	-s ENVIRONMENT=web
 
 EMCC_FLAGS = -g $(EMCC_FLAGS_COMMON)
+# Link-only: no -g, so emcc strips DWARF even though the .o files were compiled with -g.
 EMCC_FLAGS_NO_SYMBOLS = $(EMCC_FLAGS_COMMON)
+EMCC_COMPILE_FLAGS = \
+	-O2 \
+	-fno-optimize-sibling-calls \
+	-std=c++17
 
 .PHONY: all no-symbols symbols clean
 
@@ -46,15 +55,24 @@ all: $(OUT_JS)
 $(OUT_DIR):
 	mkdir -p $(OUT_DIR)
 
+$(OBJ_DIR):
+	mkdir -p $(OBJ_DIR)
+
 $(OUT_JS): $(SRC) | $(OUT_DIR)
 	$(EMCC) $(EMCC_FLAGS) $(SRC) -o $(OUT_JS)
 
-$(OUT_JS_NO_SYMBOLS): $(SRC) | $(OUT_DIR)
-	$(EMCC) $(EMCC_FLAGS_NO_SYMBOLS) $(SRC) -o $(OUT_JS_NO_SYMBOLS)
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
+	$(EMCC) -c -g $(EMCC_COMPILE_FLAGS) $< -o $@
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/chaos/%.cpp | $(OBJ_DIR)
+	$(EMCC) -c -g $(EMCC_COMPILE_FLAGS) $< -o $@
+
+$(OUT_JS_NO_SYMBOLS): $(OBJS) | $(OUT_DIR)
+	$(EMCC) $(EMCC_FLAGS_NO_SYMBOLS) $(OBJS) -o $(OUT_JS_NO_SYMBOLS)
 
 no-symbols: $(OUT_JS_NO_SYMBOLS)
 	@echo ""
-	@echo "Built without -g: $(OUT_JS_NO_SYMBOLS) + $(OUT_WASM_NO_SYMBOLS)"
+	@echo "Compiled -g, linked without -g: $(OUT_JS_NO_SYMBOLS) + $(OUT_WASM_NO_SYMBOLS)"
 	@echo "Open with ?symbols=0 (default harness uses symbolicated build)."
 	@echo ""
 
@@ -70,5 +88,6 @@ symbols: all
 	@echo ""
 
 clean:
+	rm -rf $(OBJ_DIR)
 	rm -f $(OUT_DIR)/maze.js $(OUT_DIR)/maze.wasm $(OUT_DIR)/maze.debug.wasm \
 		$(OUT_DIR)/maze.nosym.js $(OUT_DIR)/maze.nosym.wasm
