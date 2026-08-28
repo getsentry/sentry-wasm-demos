@@ -280,6 +280,15 @@ h1 {
   background: rgba(255, 69, 168, 0.12);
 }
 
+#trigger-webgl-context-lost {
+  border-color: #ffb84d;
+  color: #ffb84d;
+}
+
+#trigger-webgl-context-lost:hover {
+  background: rgba(255, 184, 77, 0.12);
+}
+
 .sentry-feedback {
   margin: 0.45rem 0 0;
   min-height: 0.9rem;

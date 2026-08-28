@@ -1,5 +1,6 @@
 import { loadEmscriptenModule } from '../harness/loaders.js';
 import { wireSentryTestButtons } from '../harness/sentry-tests.js';
+import { wireWebGlContextLossTest } from '../harness/webgl-crash.js';
 
 const canvas = document.getElementById('screen');
 const status = document.getElementById('status');
@@ -85,5 +86,6 @@ export async function start(config) {
   );
 
   wireSentryTestButtons(() => mod);
+  wireWebGlContextLossTest(canvas, () => mod);
   requestAnimationFrame(loop);
 }
