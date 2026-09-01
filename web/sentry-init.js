@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/browser';
 import { wasmIntegration } from '@sentry/wasm';
+import { trimRustPanicMessage } from './harness/rust-panic.js';
 
 // Injected at build time from web/.env via build-js.mjs — not stored in HTML.
 const dsn = __SENTRY_DSN__;
@@ -14,6 +15,15 @@ if (!sentryDsnSet) {
     tracesSampleRate: 0,
     environment: 'demo',
     release: 'wasm-maze-demo@dev',
+    beforeBreadcrumb(breadcrumb) {
+      if (breadcrumb.category !== 'console' || typeof breadcrumb.message !== 'string') {
+        return breadcrumb;
+      }
+      if (breadcrumb.message.includes('panicked at')) {
+        breadcrumb.message = trimRustPanicMessage(breadcrumb.message) ?? breadcrumb.message;
+      }
+      return breadcrumb;
+    },
     beforeSend(event) {
       const crash = event.contexts?.wasm_crash;
       const primary = event.exception?.values?.[0];

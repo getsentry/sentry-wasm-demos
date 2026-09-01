@@ -56,12 +56,18 @@ export function applyHarnessContext(config) {
  */
 
 /**
+ * @typedef {object} CaptureHarnessExceptionOptions
+ * @property {string | null} [panicMessage] Rust console_error_panic_hook line, if captured
+ */
+
+/**
  * Send the original error so wasm symbolication runs on the main stack.
  * Issue title backend:err is applied in sentry-init beforeSend (no wrapper/cause).
  * @param {unknown} err
  * @param {HarnessCrashType} crashType
+ * @param {CaptureHarnessExceptionOptions} [options]
  */
-export function captureHarnessException(err, crashType) {
+export function captureHarnessException(err, crashType, options = {}) {
   const language = harnessConfig?.language ?? 'unknown';
 
   Sentry.withScope(scope => {
@@ -81,6 +87,7 @@ export function captureHarnessException(err, crashType) {
       debug_upload_rel: harnessConfig?.debugUploadRel ?? null,
       original_message: err instanceof Error ? err.message : String(err),
       original_type: err instanceof Error ? err.name : typeof err,
+      panic_message: options.panicMessage ?? null,
     });
     Sentry.captureException(err);
   });

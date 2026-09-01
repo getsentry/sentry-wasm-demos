@@ -1,12 +1,48 @@
 import { captureHarnessException } from './sentry-context.js';
+import { trimRustPanicMessage } from './rust-panic.js';
 import { sentryDsnSet } from '../sentry-init.js';
+
+/**
+ * @param {() => void} fn
+ * @returns {{ panicLine: string | null, err: unknown | null }}
+ */
+function withRustPanicCapture(fn) {
+  let panicLine = null;
+  const original = console.error;
+
+  console.error = (...args) => {
+    for (const arg of args) {
+      if (typeof arg === 'string' && arg.includes('panicked at')) {
+        if (panicLine === null) {
+          panicLine = arg;
+        }
+        const short = trimRustPanicMessage(arg);
+        if (short) {
+          original.apply(console, [short]);
+        }
+        return;
+      }
+    }
+    original.apply(console, args);
+  };
+
+  try {
+    fn();
+    return { panicLine, err: null };
+  } catch (err) {
+    return { panicLine, err };
+  } finally {
+    console.error = original;
+  }
+}
 
 /**
  * @param {object} mod wasm module instance (Emscripten Module object)
  * @param {string} exportName C export without leading underscore
  * @param {string} label UI label
+ * @param {import('./sentry-context.js').HarnessCrashType} crashType
  */
-export function callWasmCrash(mod, exportName, label) {
+export function callWasmCrash(mod, exportName, label, crashType) {
   const feedback = document.getElementById('sentry-feedback');
 
   function showFeedback(message) {
@@ -23,20 +59,22 @@ export function callWasmCrash(mod, exportName, label) {
   }
 
   showFeedback(`Calling ${label}…`);
-  try {
+  const { panicLine, err } = withRustPanicCapture(() => {
     fn();
+  });
+
+  if (err === null) {
     showFeedback(`${label} returned (unexpected)`);
-  } catch (err) {
-    console.error('[wasm crash]', err);
-    console.error('[wasm crash stack]\n', err.stack);
-    const crashType = exportName === 'trigger_crash_deep' ? 'deep_stack' : 'divzero';
-    captureHarnessException(err, crashType);
-    showFeedback(
-      sentryDsnSet
-        ? `${label}: ${err.message} — sent to Sentry.`
-        : `${label}: ${err.message} — no DSN in build.`,
-    );
+    return;
   }
+
+  console.error('[wasm crash]', err instanceof Error ? err.message : String(err));
+  captureHarnessException(err, crashType, { panicMessage: trimRustPanicMessage(panicLine) });
+  showFeedback(
+    sentryDsnSet
+      ? `${label}: ${err instanceof Error ? err.message : String(err)} — sent to Sentry.`
+      : `${label}: ${err instanceof Error ? err.message : String(err)} — no DSN in build.`,
+  );
 }
 
 export function wireSentryTestButtons(getModule) {
@@ -54,11 +92,11 @@ export function wireSentryTestButtons(getModule) {
   });
 
   document.getElementById('trigger-wasm-divzero')?.addEventListener('click', () => {
-    callWasmCrash(getModule(), 'trigger_crash_divzero', 'WASM divzero');
+    callWasmCrash(getModule(), 'trigger_crash_divzero', 'WASM divzero', 'divzero');
   });
 
   document.getElementById('trigger-wasm-deep')?.addEventListener('click', () => {
-    callWasmCrash(getModule(), 'trigger_crash_deep', 'WASM deep stack');
+    callWasmCrash(getModule(), 'trigger_crash_deep', 'WASM deep stack', 'deep_stack');
   });
 }
 
