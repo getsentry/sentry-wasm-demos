@@ -1,5 +1,5 @@
 .PHONY: all no-symbols symbols clean emscripten-raycast emscripten-opengl rust rust-release-debug rust-symbols \
-	rust-release-debug-symbols rust-no-symbols full split sourcemap
+	rust-release-debug-symbols rust-no-symbols js-sourcemaps full split sourcemap
 
 all emscripten-raycast:
 	$(MAKE) -C backends/emscripten-raycast all
@@ -34,6 +34,9 @@ no-symbols:
 
 rust-no-symbols:
 	$(MAKE) -C backends/rust no-symbols
+
+js-sourcemaps:
+	cd web && npm run build:js && npm run upload:sourcemaps
 
 symbols:
 	$(MAKE) -C backends/emscripten-raycast symbols

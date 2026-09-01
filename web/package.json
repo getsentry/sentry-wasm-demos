@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build:js": "node build-js.mjs",
+    "upload:sourcemaps": "node upload-sourcemaps.mjs",
     "watch:js": "node build-js.mjs --watch"
   },
   "dependencies": {

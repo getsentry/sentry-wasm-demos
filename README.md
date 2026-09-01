@@ -217,7 +217,7 @@ WASD or arrows. Collect all keys, exit bottom-right.
 
 ```bash
 make clean && make && make symbols && make no-symbols
-cd web && npm run build:js && cd ..
+cd web && npm run build:js && npm run upload:sourcemaps && cd ..
 python3 -m http.server 8080
 ```
 
@@ -229,7 +229,7 @@ python3 -m http.server 8080
 make clean && make && make symbols && make no-symbols
 set -a && source web/.env && set +a
 sentry-cli debug-files upload -t wasm web/assets/emscripten-raycast/maze.debug.wasm
-cd web && npm run build:js && cd ..
+cd web && npm run build:js && npm run upload:sourcemaps && cd ..
 python3 -m http.server 8080
 ```
 
@@ -238,7 +238,7 @@ python3 -m http.server 8080
 **Only changed JS / harness / HTML / CSS**
 
 ```bash
-cd web && npm run build:js && cd ..
+cd web && npm run build:js && npm run upload:sourcemaps && cd ..
 ```
 
 → hard-refresh · no `make`, no upload
@@ -249,7 +249,7 @@ cd web && npm run build:js && cd ..
 make clean && make && make symbols && make no-symbols
 set -a && source web/.env && set +a
 sentry-cli debug-files upload -t wasm web/assets/emscripten-raycast/maze.debug.wasm
-cd web && npm run build:js && cd ..
+cd web && npm run build:js && npm run upload:sourcemaps && cd ..
 ```
 
 → re-upload required (`debug_id` changes every wasm build)
@@ -260,7 +260,7 @@ cd web && npm run build:js && cd ..
 make -C backends/rust clean && make rust && make rust-symbols && make rust-no-symbols
 set -a && source web/.env && set +a
 sentry-cli debug-files upload -t wasm --include-sources web/assets/rust/demo.debug.wasm
-cd web && npm run build:js && cd ..
+cd web && npm run build:js && npm run upload:sourcemaps && cd ..
 ```
 
 → open `?backend=rust` · re-upload required (`debug_id` changes every wasm build)
@@ -302,13 +302,17 @@ set -a && source web/.env && set +a
 sentry-cli debug-files upload -t wasm --include-sources web/assets/rust/demo.debug.wasm
 ```
 
-**Step 4.** Bundle JS
+**Step 4.** Bundle JS and upload source maps (for harness frames in `sentry-tests.js`, etc.)
 
 ```bash
 cd web
 npm install
 npm run build:js
+npm run upload:sourcemaps
 cd ..
+```
+
+JS stacks use `SENTRY_RELEASE` + `SENTRY_URL_PREFIX` from `web/.env` (default `http://localhost:8080/web/`). Re-run after every `build:js`. Wasm frames still need step 3.
 ```
 
 **Step 5.** Serve

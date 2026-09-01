@@ -14,7 +14,7 @@ if (!sentryDsnSet) {
     integrations: [wasmIntegration()],
     tracesSampleRate: 0,
     environment: 'demo',
-    release: 'wasm-maze-demo@dev',
+    release: __SENTRY_RELEASE__,
     beforeBreadcrumb(breadcrumb) {
       if (breadcrumb.category !== 'console' || typeof breadcrumb.message !== 'string') {
         return breadcrumb;

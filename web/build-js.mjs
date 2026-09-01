@@ -1,35 +1,11 @@
 import { build } from 'esbuild';
-import { existsSync, readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import { env, sentryRelease } from './env.mjs';
 
 const root = dirname(fileURLToPath(import.meta.url));
 
-function loadDsn() {
-  if (process.env.SENTRY_DSN) {
-    return process.env.SENTRY_DSN.trim();
-  }
-
-  const envPath = join(root, '.env');
-  if (!existsSync(envPath)) {
-    return '';
-  }
-
-  for (const line of readFileSync(envPath, 'utf8').split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) {
-      continue;
-    }
-    const match = trimmed.match(/^SENTRY_DSN=(.*)$/);
-    if (match) {
-      return match[1].trim().replace(/^["']|["']$/g, '');
-    }
-  }
-
-  return '';
-}
-
-const dsn = loadDsn();
+const dsn = env('SENTRY_DSN');
 const shared = {
   entryPoints: [join(root, 'bootstrap.js')],
   bundle: true,
@@ -38,6 +14,7 @@ const shared = {
   sourcemap: true,
   define: {
     __SENTRY_DSN__: JSON.stringify(dsn),
+    __SENTRY_RELEASE__: JSON.stringify(sentryRelease),
   },
 };
 
