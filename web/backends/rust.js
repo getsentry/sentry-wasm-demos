@@ -29,7 +29,13 @@ function drawPlaceholder() {
 export async function start(config) {
   const glue = await importBindgenGlue(config.glueScript);
   if (typeof glue.default !== 'function') {
-    throw new Error(`Rust glue missing default init — run \`make rust\`, then hard-refresh`);
+    const buildHint =
+      config.build === 'release-stripped'
+        ? 'make rust-no-symbols'
+        : config.build === 'release-debug'
+          ? 'make rust-release-debug && make rust-release-debug-symbols'
+          : 'make rust && make rust-symbols';
+    throw new Error(`Rust glue missing default init — run \`${buildHint}\`, then hard-refresh`);
   }
 
   await loadWasmBindgenModule({
@@ -55,7 +61,7 @@ export async function start(config) {
     hud.textContent = 'Rust wasm loaded — divzero / deep stack via Sentry panel';
   }
   if (status) {
-    status.textContent = `Loaded ${config.wasmUrl.split('/').pop()} · ${config.load}`;
+    status.textContent = `Loaded ${config.wasmUrl.split('/').pop()} · ${config.load} · ${config.build ?? 'default'}`;
   }
 
   drawPlaceholder();

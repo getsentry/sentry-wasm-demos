@@ -102,7 +102,7 @@ export function loadGlueScript(src) {
     script.onload = () => resolve(undefined);
     script.onerror = () => {
       const nosymHint = src.includes('_nosym') || src.includes('.nosym.')
-        ? ' Run `make no-symbols` (Emscripten) or `make rust-no-symbols` (Rust), or drop ?symbols=0.'
+        ? ' Run `make no-symbols` (Emscripten) or `make rust-no-symbols` (Rust), or use ?build=dev.'
         : '';
       reject(new Error(`Failed to load WASM glue: ${url}.${nosymHint}`));
     };

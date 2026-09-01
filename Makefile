@@ -1,4 +1,5 @@
-.PHONY: all no-symbols symbols clean emscripten-raycast emscripten-opengl rust rust-symbols rust-no-symbols full split sourcemap
+.PHONY: all no-symbols symbols clean emscripten-raycast emscripten-opengl rust rust-release-debug rust-symbols \
+	rust-release-debug-symbols rust-no-symbols full split sourcemap
 
 all emscripten-raycast:
 	$(MAKE) -C backends/emscripten-raycast all
@@ -18,8 +19,14 @@ emscripten-opengl:
 rust:
 	$(MAKE) -C backends/rust all
 
+rust-release-debug:
+	$(MAKE) -C backends/rust release-debug
+
 rust-symbols:
 	$(MAKE) -C backends/rust symbols
+
+rust-release-debug-symbols:
+	$(MAKE) -C backends/rust release-debug-symbols
 
 no-symbols:
 	$(MAKE) -C backends/emscripten-raycast no-symbols

@@ -321,4 +321,6 @@ Open [http://localhost:8080/web/?backend=rust](http://localhost:8080/web/?backen
 
 Re-run step **2** and step **3** after any Rust change.
 
-Dev build uses `debug = 2` + `-C debuginfo=2` for line tables — run `make -C backends/rust clean` before rebuild when changing debug flags.
+Release-debug with symbolication: `?backend=rust&build=release-debug` (`make rust-release-debug && make rust-release-debug-symbols`, upload `demo_release.debug.wasm`).
+
+Release-stripped negative control (`debuginfo=0` only): `?backend=rust&build=release-stripped` (`make rust-no-symbols`, no upload).

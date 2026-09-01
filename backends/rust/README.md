@@ -2,24 +2,21 @@
 
 Crash-only demo: `trigger_crash_divzero`, `trigger_crash_deep`, `ping`.
 
-## Build
+## Build variants
 
-```bash
-make -C backends/rust clean && make -C backends/rust all && make -C backends/rust symbols
-```
+| Harness URL | Make targets | Browser wasm | Upload to Sentry |
+| ----------- | ------------ | ------------ | ---------------- |
+| `?backend=rust` (default) | `make rust && make rust-symbols` | `demo_bg.wasm` | `demo.debug.wasm` |
+| `?backend=rust&build=release-debug` | `make rust-release-debug && make rust-release-debug-symbols` | `demo_release_bg.wasm` | `demo_release.debug.wasm` |
+| `?backend=rust&build=release-stripped` | `make rust-no-symbols` | `demo_nosym_bg.wasm` | none |
 
-Or from repo root: `make rust && make rust-symbols`.
+**Dev** — `[profile.dev]` with `debug = 2`, no optimization.
 
-- **`demo.js` + `demo_bg.wasm`** — browser bundle (stripped after `symbols`)
-- **`demo.debug.wasm`** — upload to Sentry (DWARF + line tables)
+**Release-debug** — `[profile.release]` with `opt-level = "s"`, `lto = true`, and **`debug = true`**. `wasm-split --strip` moves DWARF into `demo_release.debug.wasm` for upload.
 
-`wasm-pack` output must be used for the browser (wasm-bindgen import layout). Enable `dwarf-debug-info = true` in `Cargo.toml` so DWARF survives bindgen, then `wasm-split` extracts it into `demo.debug.wasm`.
+**Release-stripped** — same release profile but `RUSTFLAGS=-C debuginfo=0` only (no `strip=symbols`); tests rustc emitting no DWARF.
 
 ## Symbolication
-
-Dev build embeds full debug info (`debug = 2`, `-C debuginfo=2`).
-
-After any Rust or debug-flag change:
 
 ```bash
 make -C backends/rust clean && make rust && make rust-symbols
@@ -27,14 +24,11 @@ set -a && source web/.env && set +a
 sentry-cli debug-files upload -t wasm --include-sources web/assets/rust/demo.debug.wasm
 ```
 
-Re-upload after every build (`debug_id` changes). Trigger a **new** issue after upload.
-
-Check issue JSON: `has_debug_info: true` and/or `has_sources: true` when line info and source panel work.
-
-## No-symbols variant
+For release-debug:
 
 ```bash
-make -C backends/rust no-symbols
+make -C backends/rust clean && make rust-release-debug && make rust-release-debug-symbols
+sentry-cli debug-files upload -t wasm --include-sources web/assets/rust/demo_release.debug.wasm
 ```
 
-Open with `?backend=rust&symbols=0`.
+Re-upload after every build (`debug_id` changes). Hard-refresh the browser before triggering a new crash.

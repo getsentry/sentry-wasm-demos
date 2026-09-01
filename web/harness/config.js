@@ -1,6 +1,6 @@
 /** @typedef {'emscripten-raycast' | 'emscripten-opengl' | 'rust'} BackendId */
 /** @typedef {'streaming' | 'instantiate' | 'default'} LoadMode */
-/** @typedef {'full' | 'split' | 'sourcemap'} BuildVariant */
+/** @typedef {'full' | 'split' | 'sourcemap' | 'dev' | 'release-debug' | 'release-stripped'} BuildVariant */
 /** @typedef {'emscripten' | 'wasm-bindgen'} BackendLoader */
 /** @typedef {'cpp' | 'rust'} BackendLanguage */
 
@@ -12,7 +12,8 @@
  * @property {string} assetDir
  * @property {string | null} glueGlobal
  * @property {BackendLoader} loader
- * @property {(symbols: boolean, build: BuildVariant) => { glueScript: string, wasmRel: string, debugUploadRel: string | null }} resolveAssets
+ * @property {readonly BuildVariant[] | null} buildVariants first entry is the default
+ * @property {(symbols: boolean, build: BuildVariant | null) => { glueScript: string, wasmRel: string, debugUploadRel: string | null }} resolveAssets
  * @property {() => Promise<{ start: Function }>} runner
  */
 
@@ -25,6 +26,7 @@ const BACKENDS = {
     assetDir: 'assets/emscripten-raycast',
     glueGlobal: 'createMazeModule',
     loader: 'emscripten',
+    buildVariants: ['split', 'full', 'sourcemap'],
     resolveAssets(symbols, build) {
       if (!symbols) {
         return {
@@ -58,6 +60,7 @@ const BACKENDS = {
     assetDir: 'assets/emscripten-opengl',
     glueGlobal: 'createMazeModule',
     loader: 'emscripten',
+    buildVariants: null,
     resolveAssets(symbols) {
       const base = symbols ? 'maze' : 'maze.nosym';
       return {
@@ -75,12 +78,28 @@ const BACKENDS = {
     assetDir: 'assets/rust',
     glueGlobal: null,
     loader: 'wasm-bindgen',
-    resolveAssets(symbols) {
-      const base = symbols ? 'demo' : 'demo_nosym';
+    buildVariants: ['dev', 'release-debug', 'release-stripped'],
+    resolveAssets(_symbols, build) {
+      if (build === 'release-stripped') {
+        return {
+          glueScript: `${this.assetDir}/demo_nosym.js`,
+          wasmRel: `${this.assetDir}/demo_nosym_bg.wasm`,
+          debugUploadRel: null,
+        };
+      }
+
+      if (build === 'release-debug') {
+        return {
+          glueScript: `${this.assetDir}/demo_release.js`,
+          wasmRel: `${this.assetDir}/demo_release_bg.wasm`,
+          debugUploadRel: `${this.assetDir}/demo_release.debug.wasm`,
+        };
+      }
+
       return {
-        glueScript: `${this.assetDir}/${base}.js`,
-        wasmRel: `${this.assetDir}/${base}_bg.wasm`,
-        debugUploadRel: symbols ? `${this.assetDir}/demo.debug.wasm` : null,
+        glueScript: `${this.assetDir}/demo.js`,
+        wasmRel: `${this.assetDir}/demo_bg.wasm`,
+        debugUploadRel: `${this.assetDir}/demo.debug.wasm`,
       };
     },
     runner: () => import('../backends/rust.js'),
@@ -88,7 +107,6 @@ const BACKENDS = {
 };
 
 const LOAD_MODES = /** @type {const} */ (['streaming', 'instantiate', 'default']);
-const BUILD_VARIANTS = /** @type {const} */ (['full', 'split', 'sourcemap']);
 const SYMBOLS_VALUES = /** @type {const} */ (['0', '1']);
 
 function assertQuerySeparators(search) {
@@ -124,8 +142,31 @@ function parseEnumParam(raw, allowed, param, formatInvalid) {
 }
 
 /**
- * Harness options from URL query (?backend=&load=&symbols=).
- * Same page shell for every WASM backend.
+ * @param {BackendConfig} backend
+ * @param {string | null} raw
+ * @returns {BuildVariant | null}
+ */
+function resolveBuildVariant(backend, raw) {
+  const variants = backend.buildVariants;
+
+  if (!variants) {
+    if (raw !== null) {
+      throw new Error(`?build= is not supported by backend ${JSON.stringify(backend.id)}.`);
+    }
+    return null;
+  }
+
+  return (
+    parseEnumParam(raw, variants, 'build', value => {
+      return `Unknown build variant ${JSON.stringify(value)} for ${backend.id}.\nTry ${variants
+        .map(variant => `?build=${variant}`)
+        .join(', ')}.`;
+    }) || variants[0]
+  );
+}
+
+/**
+ * Harness options from URL query (?backend=&build=&load=&symbols=).
  */
 export function getHarnessConfig() {
   assertQuerySeparators(window.location.search);
@@ -150,16 +191,8 @@ export function getHarnessConfig() {
   });
   const symbols = symbolsRaw !== '0';
 
-  /** @type {BuildVariant} */
-  const build =
-    backendId === 'emscripten-raycast'
-      ? parseEnumParam(params.get('build'), BUILD_VARIANTS, 'build', value => {
-          if (value.includes('|') || value.includes(',')) {
-            return `Invalid ?build=${JSON.stringify(value)} — pick one: full, split, or sourcemap.`;
-          }
-          return `Unknown build variant ${JSON.stringify(value)}.\nTry ?build=full, ?build=split, or ?build=sourcemap.`;
-        }) || 'split'
-      : 'split';
+  /** @type {BuildVariant | null} */
+  const build = resolveBuildVariant(backend, params.get('build'));
 
   /** @type {LoadMode} */
   const load =
@@ -171,6 +204,7 @@ export function getHarnessConfig() {
     }) || 'streaming';
 
   const assets = backend.resolveAssets(symbols, build);
+  const effectiveSymbols = backend.id === 'rust' ? build !== 'release-stripped' : symbols;
 
   return {
     backendId: backend.id,
@@ -178,7 +212,7 @@ export function getHarnessConfig() {
     language: backend.language,
     loader: backend.loader,
     load,
-    symbols,
+    symbols: effectiveSymbols,
     build,
     glueGlobal: backend.glueGlobal,
     glueScript: assets.glueScript,
@@ -189,7 +223,8 @@ export function getHarnessConfig() {
 }
 
 export function formatHarnessBanner(config) {
-  const buildPart =
-    config.backendId === 'emscripten-raycast' && config.symbols ? ` · build=${config.build}` : '';
-  return `${config.backendLabel} · ${config.language} · load=${config.load} · symbols=${config.symbols ? 'on' : 'off'}${buildPart}`;
+  const buildPart = config.build ? ` · build=${config.build}` : '';
+  const symbolsPart =
+    config.backendId === 'rust' ? '' : ` · symbols=${config.symbols ? 'on' : 'off'}`;
+  return `${config.backendLabel} · ${config.language} · load=${config.load}${symbolsPart}${buildPart}`;
 }

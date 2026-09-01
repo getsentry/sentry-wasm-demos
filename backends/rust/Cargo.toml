@@ -17,11 +17,14 @@ opt-level = 0
 [profile.release]
 opt-level = "s"
 lto = true
-debug = false
-strip = "symbols"
+debug = true
+strip = "none"
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = false
+
+[package.metadata.wasm-pack.profile.release.wasm-bindgen]
+dwarf-debug-info = true
 
 [package.metadata.wasm-pack.profile.dev]
 wasm-opt = false

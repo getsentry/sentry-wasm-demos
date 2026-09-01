@@ -7,7 +7,7 @@ import { Sentry, sentryDsnSet } from '../sentry-init.js';
  * @property {'cpp' | 'rust'} language
  * @property {string} loader
  * @property {'streaming' | 'instantiate' | 'default'} load
- * @property {'full' | 'split' | 'sourcemap'} build
+ * @property {'full' | 'split' | 'sourcemap' | 'dev' | 'release-debug' | 'release-stripped' | null} build
  * @property {boolean} symbols
  * @property {string} wasmUrl
  * @property {string} glueScript
@@ -34,9 +34,7 @@ export function applyHarnessContext(config) {
     'wasm.loader': config.loader,
     'wasm.load': config.load,
     'wasm.symbols': config.symbols ? 'on' : 'off',
-    ...(config.backendId === 'emscripten-raycast' && config.symbols
-      ? { 'wasm.build': config.build }
-      : {}),
+    ...(config.build ? { 'wasm.build': config.build } : {}),
   });
 
   Sentry.setContext('wasm_harness', {
@@ -45,7 +43,7 @@ export function applyHarnessContext(config) {
     language: config.language,
     loader: config.loader,
     load_mode: config.load,
-    build_variant: config.backendId === 'emscripten-raycast' ? config.build : null,
+    build_variant: config.build,
     symbols: config.symbols,
     wasm_url: config.wasmUrl,
     glue_script: config.glueScript,
@@ -68,7 +66,7 @@ export function captureHarnessException(err, crashType) {
 
   Sentry.withScope(scope => {
     scope.setTag('wasm.crash_type', crashType);
-    if (harnessConfig?.backendId === 'emscripten-raycast' && harnessConfig.symbols) {
+    if (harnessConfig?.build) {
       scope.setTag('wasm.build', harnessConfig.build);
     }
     scope.setFingerprint(['wasm-demo', crashType, language]);

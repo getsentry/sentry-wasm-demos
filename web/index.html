@@ -71,6 +71,27 @@
             wasm-bindgen crash demo
           </li>
           <li>
+            Rust builds:
+            <a class="harness-preset" data-harness-preset="backend=rust&build=dev" href="?backend=rust&amp;build=dev"
+              ><code>?backend=rust&amp;build=dev</code></a
+            >
+            (default) ·
+            <a
+              class="harness-preset"
+              data-harness-preset="backend=rust&build=release-debug"
+              href="?backend=rust&amp;build=release-debug"
+              ><code>?backend=rust&amp;build=release-debug</code></a
+            >
+            ·
+            <a
+              class="harness-preset"
+              data-harness-preset="backend=rust&build=release-stripped"
+              href="?backend=rust&amp;build=release-stripped"
+              ><code>?backend=rust&amp;build=release-stripped</code></a
+            >
+            (debuginfo=0)
+          </li>
+          <li>
             Coverage matrix builds (emscripten-raycast, same divzero / deep-stack buttons):
             <a class="harness-preset" data-harness-preset="build=full" href="?build=full"><code>?build=full</code></a>
             ·
