@@ -28,10 +28,19 @@ For **all harness URL paths** (`?symbols=0`, `?load=…`, default), build **both
 
 ```bash
 source /path/to/emsdk/emsdk_env.sh
-make clean && make && make symbols && make no-symbols
-cd web && npm install && npm run build:js && cd ..
+make clean && make && cd web && npm install && npm run build:js && cd ..
 python3 -m http.server 8080
 ```
+
+`make` builds three coverage-matrix variants for **emscripten-raycast** (same C++ crash buttons):
+
+| `?build=` | Makefile target | Browser wasm | Upload to Sentry |
+|-----------|-----------------|--------------|------------------|
+| `full` | `make full` | `maze.full.wasm` (DWARF inside) | same file |
+| `split` (default) | `make split` | `maze.split.wasm` (stripped) | `maze.split.debug.wasm` (`-gseparate-dwarf` at link) |
+| `sourcemap` | `make sourcemap` | `maze.sourcemap.wasm` | TBD — `-O2 -gsource-map` |
+
+Events are tagged `wasm.build=full|split|sourcemap` for matrix filtering.
 
 
 | Build target            | Artifacts                                 | Used when                                    |
@@ -121,8 +130,9 @@ Requires `make symbols` for default / `?symbols=1`, and `make no-symbols` for `?
 | Param     | Values                                            | Default              | Needs                                    |
 | --------- | ------------------------------------------------- | -------------------- | ---------------------------------------- |
 | `backend` | `emscripten-raycast`, `emscripten-opengl`, `rust` | `emscripten-raycast` | backend build |
-| `load`    | `streaming`, `instantiate`, `default`             | `streaming`          | `maze.*` or `maze.nosym.*` per `symbols` |
-| `symbols` | `1` / `0`                                         | `1`                  | `make symbols` / `make no-symbols`       |
+| `build`   | `full`, `split`, `sourcemap`                      | `split`              | emscripten-raycast only (`make` targets) |
+| `load`    | `streaming`, `instantiate`, `default`             | `streaming`          | per `build` / `symbols`                  |
+| `symbols` | `1` / `0`                                         | `1`                  | `make no-symbols` for `?symbols=0`       |
 
 
 Examples (use `&` between params, one value each — not `|`):

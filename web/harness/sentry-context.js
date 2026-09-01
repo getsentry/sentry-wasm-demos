@@ -7,9 +7,11 @@ import { Sentry, sentryDsnSet } from '../sentry-init.js';
  * @property {'cpp' | 'rust'} language
  * @property {string} loader
  * @property {'streaming' | 'instantiate' | 'default'} load
+ * @property {'full' | 'split' | 'sourcemap'} build
  * @property {boolean} symbols
  * @property {string} wasmUrl
  * @property {string} glueScript
+ * @property {string | null} debugUploadRel
  */
 
 /** @type {HarnessSentryConfig | null} */
@@ -32,6 +34,9 @@ export function applyHarnessContext(config) {
     'wasm.loader': config.loader,
     'wasm.load': config.load,
     'wasm.symbols': config.symbols ? 'on' : 'off',
+    ...(config.backendId === 'emscripten-raycast' && config.symbols
+      ? { 'wasm.build': config.build }
+      : {}),
   });
 
   Sentry.setContext('wasm_harness', {
@@ -40,9 +45,11 @@ export function applyHarnessContext(config) {
     language: config.language,
     loader: config.loader,
     load_mode: config.load,
+    build_variant: config.backendId === 'emscripten-raycast' ? config.build : null,
     symbols: config.symbols,
     wasm_url: config.wasmUrl,
     glue_script: config.glueScript,
+    debug_upload_rel: config.debugUploadRel,
   });
 }
 
@@ -61,14 +68,19 @@ export function captureHarnessException(err, crashType) {
 
   Sentry.withScope(scope => {
     scope.setTag('wasm.crash_type', crashType);
+    if (harnessConfig?.backendId === 'emscripten-raycast' && harnessConfig.symbols) {
+      scope.setTag('wasm.build', harnessConfig.build);
+    }
     scope.setFingerprint(['wasm-demo', crashType, language]);
     scope.setContext('wasm_crash', {
       crash_type: crashType,
       language,
       issue_title: `${language}:${crashType}`,
       backend_id: harnessConfig?.backendId ?? null,
+      build_variant: harnessConfig?.build ?? null,
       load_mode: harnessConfig?.load ?? null,
       symbols: harnessConfig?.symbols ?? null,
+      debug_upload_rel: harnessConfig?.debugUploadRel ?? null,
       original_message: err instanceof Error ? err.message : String(err),
       original_type: err instanceof Error ? err.name : typeof err,
     });

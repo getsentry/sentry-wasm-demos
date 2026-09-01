@@ -11,12 +11,22 @@ OUT_DIR = ../../web/assets/emscripten-raycast
 
 SRC = $(SRC_DIR)/main.cpp $(SRC_DIR)/maze.cpp $(SRC_DIR)/raycast.cpp $(SRC_DIR)/game.cpp $(SRC_DIR)/minimap.cpp \
 	$(SRC_DIR)/chaos/chaos.cpp $(SRC_DIR)/chaos/chaos_divzero.cpp \
-	$(SRC_DIR)/chaos/chaos_deep1.cpp $(SRC_DIR)/chaos/chaos_deep2.cpp $(SRC_DIR)/chaos/chaos_deep3.cpp \
-	$(SRC_DIR)/chaos/chaos_deep4.cpp $(SRC_DIR)/chaos/chaos_deep5.cpp
+	$(SRC_DIR)/chaos/chaos_deep1.cpp $(SRC_DIR)/chaos/chaos_deep2.cpp \
+	$(SRC_DIR)/chaos/chaos_deep3.cpp $(SRC_DIR)/chaos/chaos_deep4.cpp \
+	$(SRC_DIR)/chaos/chaos_deep5.cpp
 
-# src/foo.cpp and src/chaos/foo.cpp both land in obj/foo.o
 OBJS = $(addprefix $(OBJ_DIR)/,$(notdir $(SRC:.cpp=.o)))
 
+# Coverage-matrix variants (?build=full|split|sourcemap on emscripten-raycast)
+OUT_FULL_JS = $(OUT_DIR)/maze.full.js
+OUT_FULL_WASM = $(OUT_DIR)/maze.full.wasm
+OUT_SPLIT_JS = $(OUT_DIR)/maze.split.js
+OUT_SPLIT_WASM = $(OUT_DIR)/maze.split.wasm
+OUT_SPLIT_DEBUG_WASM = $(OUT_DIR)/maze.split.debug.wasm
+OUT_SOURCEMAP_JS = $(OUT_DIR)/maze.sourcemap.js
+OUT_SOURCEMAP_WASM = $(OUT_DIR)/maze.sourcemap.wasm
+
+# Legacy wasm-split path (optional comparison — not used by default harness)
 OUT_JS = $(OUT_DIR)/maze.js
 OUT_WASM = $(OUT_DIR)/maze.wasm
 DEBUG_WASM = $(OUT_DIR)/maze.debug.wasm
@@ -40,17 +50,17 @@ EMCC_FLAGS_COMMON = \
 	-s ALLOW_MEMORY_GROWTH=1 \
 	-s ENVIRONMENT=web
 
-EMCC_FLAGS = -g $(EMCC_FLAGS_COMMON)
-# Link-only: no -g, so emcc strips DWARF even though the .o files were compiled with -g.
+EMCC_FLAGS_DWARF = -g $(EMCC_FLAGS_COMMON)
+EMCC_FLAGS_SOURCEMAP = -gsource-map $(EMCC_FLAGS_COMMON)
 EMCC_FLAGS_NO_SYMBOLS = $(EMCC_FLAGS_COMMON)
 EMCC_COMPILE_FLAGS = \
 	-O2 \
 	-fno-optimize-sibling-calls \
 	-std=c++17
 
-.PHONY: all no-symbols symbols clean
+.PHONY: all full split sourcemap no-symbols symbols clean legacy
 
-all: $(OUT_JS)
+all: full split sourcemap no-symbols legacy
 
 $(OUT_DIR):
 	mkdir -p $(OUT_DIR)
@@ -58,8 +68,45 @@ $(OUT_DIR):
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
 
-$(OUT_JS): $(SRC) | $(OUT_DIR)
-	$(EMCC) $(EMCC_FLAGS) $(SRC) -o $(OUT_JS)
+# ?build=full — DWARF stays in the browser wasm (upload the same .wasm file)
+full: $(OUT_FULL_JS)
+
+$(OUT_FULL_JS): $(SRC) | $(OUT_DIR)
+	$(EMCC) $(EMCC_FLAGS_DWARF) $(SRC) -o $(OUT_FULL_JS)
+	@echo ""
+	@echo "Full DWARF: $(OUT_FULL_JS) + $(OUT_FULL_WASM)"
+	@echo "Harness: ?backend=emscripten-raycast&build=full"
+	@echo "Upload:  sentry-cli debug-files upload -t wasm --include-sources $(OUT_FULL_WASM)"
+	@echo ""
+
+# ?build=split — linker emits stripped wasm + separate debug wasm (-gseparate-dwarf)
+split: $(OUT_SPLIT_JS)
+
+$(OUT_SPLIT_JS): $(SRC) | $(OUT_DIR)
+	$(EMCC) $(EMCC_FLAGS_DWARF) -gseparate-dwarf=$(OUT_SPLIT_DEBUG_WASM) $(SRC) -o $(OUT_SPLIT_JS)
+	@echo ""
+	@echo "Split (link): $(OUT_SPLIT_JS) + $(OUT_SPLIT_WASM)"
+	@echo "Debug file:   $(OUT_SPLIT_DEBUG_WASM)"
+	@echo "Harness: ?backend=emscripten-raycast&build=split  (default)"
+	@echo "Upload:  sentry-cli debug-files upload -t wasm --include-sources $(OUT_SPLIT_DEBUG_WASM)"
+	@echo ""
+
+# ?build=sourcemap — optimized wasm + .wasm.map (Sentry may still need DWARF upload — matrix row)
+sourcemap: $(OUT_SOURCEMAP_JS)
+
+$(OUT_SOURCEMAP_JS): $(SRC) | $(OUT_DIR)
+	$(EMCC) $(EMCC_FLAGS_SOURCEMAP) $(SRC) -o $(OUT_SOURCEMAP_JS)
+	@echo ""
+	@echo "Source map: $(OUT_SOURCEMAP_JS) + $(OUT_SOURCEMAP_WASM) (+ .wasm.map)"
+	@echo "Harness: ?backend=emscripten-raycast&build=sourcemap"
+	@echo "Upload:  try sentry-cli debug-files upload -t wasm $(OUT_SOURCEMAP_WASM) (map may not symbolicate in Sentry)"
+	@echo ""
+
+# Symlink legacy names to split build for older docs/scripts
+legacy: split
+	cp $(OUT_SPLIT_JS) $(OUT_JS)
+	cp $(OUT_SPLIT_WASM) $(OUT_WASM)
+	cp $(OUT_SPLIT_DEBUG_WASM) $(DEBUG_WASM)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(EMCC) -c -g $(EMCC_COMPILE_FLAGS) $< -o $@
@@ -73,21 +120,27 @@ $(OUT_JS_NO_SYMBOLS): $(OBJS) | $(OUT_DIR)
 no-symbols: $(OUT_JS_NO_SYMBOLS)
 	@echo ""
 	@echo "Compiled -g, linked without -g: $(OUT_JS_NO_SYMBOLS) + $(OUT_WASM_NO_SYMBOLS)"
-	@echo "Open with ?symbols=0 (default harness uses symbolicated build)."
+	@echo "Open with ?symbols=0."
 	@echo ""
 
-symbols: all
+# Optional: post-link wasm-split on full DWARF (comparison vs -gseparate-dwarf)
+symbols: full
 	@test -x "$(WASM_SPLIT)" || ( \
 		echo "wasm-split not found at '$(WASM_SPLIT)'."; \
 		echo "Install: cargo install wasm-split --git https://github.com/getsentry/symbolicator.git wasm-split"; \
 		exit 1)
-	$(WASM_SPLIT) $(OUT_WASM) -d $(DEBUG_WASM) --strip
+	$(WASM_SPLIT) $(OUT_FULL_WASM) -d $(DEBUG_WASM) --strip
+	cp $(OUT_FULL_JS) $(OUT_JS)
+	cp $(OUT_FULL_WASM) $(OUT_WASM)
 	@echo ""
-	@echo "Debug module: $(DEBUG_WASM)"
+	@echo "wasm-split debug module: $(DEBUG_WASM) (from maze.full.wasm)"
 	@echo "Upload: sentry-cli debug-files upload -t wasm $(DEBUG_WASM)"
 	@echo ""
 
 clean:
 	rm -rf $(OBJ_DIR)
-	rm -f $(OUT_DIR)/maze.js $(OUT_DIR)/maze.wasm $(OUT_DIR)/maze.debug.wasm \
+	rm -f $(OUT_DIR)/maze.full.js $(OUT_DIR)/maze.full.wasm \
+		$(OUT_DIR)/maze.split.js $(OUT_DIR)/maze.split.wasm $(OUT_DIR)/maze.split.debug.wasm \
+		$(OUT_DIR)/maze.sourcemap.js $(OUT_DIR)/maze.sourcemap.wasm $(OUT_DIR)/maze.sourcemap.wasm.map \
+		$(OUT_DIR)/maze.js $(OUT_DIR)/maze.wasm $(OUT_DIR)/maze.debug.wasm \
 		$(OUT_DIR)/maze.nosym.js $(OUT_DIR)/maze.nosym.wasm

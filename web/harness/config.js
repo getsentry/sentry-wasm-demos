@@ -1,5 +1,6 @@
 /** @typedef {'emscripten-raycast' | 'emscripten-opengl' | 'rust'} BackendId */
 /** @typedef {'streaming' | 'instantiate' | 'default'} LoadMode */
+/** @typedef {'full' | 'split' | 'sourcemap'} BuildVariant */
 /** @typedef {'emscripten' | 'wasm-bindgen'} BackendLoader */
 /** @typedef {'cpp' | 'rust'} BackendLanguage */
 
@@ -11,7 +12,7 @@
  * @property {string} assetDir
  * @property {string | null} glueGlobal
  * @property {BackendLoader} loader
- * @property {(symbols: boolean) => { glueScript: string, wasmRel: string }} resolveAssets
+ * @property {(symbols: boolean, build: BuildVariant) => { glueScript: string, wasmRel: string, debugUploadRel: string | null }} resolveAssets
  * @property {() => Promise<{ start: Function }>} runner
  */
 
@@ -24,11 +25,28 @@ const BACKENDS = {
     assetDir: 'assets/emscripten-raycast',
     glueGlobal: 'createMazeModule',
     loader: 'emscripten',
-    resolveAssets(symbols) {
-      const base = symbols ? 'maze' : 'maze.nosym';
+    resolveAssets(symbols, build) {
+      if (!symbols) {
+        return {
+          glueScript: `${this.assetDir}/maze.nosym.js`,
+          wasmRel: `${this.assetDir}/maze.nosym.wasm`,
+          debugUploadRel: null,
+        };
+      }
+
+      const variant =
+        build === 'full' ? 'maze.full' : build === 'sourcemap' ? 'maze.sourcemap' : 'maze.split';
+      const debugUploadRel =
+        build === 'full'
+          ? `${this.assetDir}/maze.full.wasm`
+          : build === 'sourcemap'
+            ? `${this.assetDir}/maze.sourcemap.wasm`
+            : `${this.assetDir}/maze.split.debug.wasm`;
+
       return {
-        glueScript: `${this.assetDir}/${base}.js`,
-        wasmRel: `${this.assetDir}/${base}.wasm`,
+        glueScript: `${this.assetDir}/${variant}.js`,
+        wasmRel: `${this.assetDir}/${variant}.wasm`,
+        debugUploadRel,
       };
     },
     runner: () => import('../backends/emscripten-raycast.js'),
@@ -45,6 +63,7 @@ const BACKENDS = {
       return {
         glueScript: `${this.assetDir}/${base}.js`,
         wasmRel: `${this.assetDir}/${base}.wasm`,
+        debugUploadRel: symbols ? `${this.assetDir}/maze.debug.wasm` : null,
       };
     },
     runner: () => import('../backends/emscripten-opengl.js'),
@@ -61,6 +80,7 @@ const BACKENDS = {
       return {
         glueScript: `${this.assetDir}/${base}.js`,
         wasmRel: `${this.assetDir}/${base}_bg.wasm`,
+        debugUploadRel: symbols ? `${this.assetDir}/demo.debug.wasm` : null,
       };
     },
     runner: () => import('../backends/rust.js'),
@@ -68,6 +88,7 @@ const BACKENDS = {
 };
 
 const LOAD_MODES = /** @type {const} */ (['streaming', 'instantiate', 'default']);
+const BUILD_VARIANTS = /** @type {const} */ (['full', 'split', 'sourcemap']);
 const SYMBOLS_VALUES = /** @type {const} */ (['0', '1']);
 
 function assertQuerySeparators(search) {
@@ -129,6 +150,17 @@ export function getHarnessConfig() {
   });
   const symbols = symbolsRaw !== '0';
 
+  /** @type {BuildVariant} */
+  const build =
+    backendId === 'emscripten-raycast'
+      ? parseEnumParam(params.get('build'), BUILD_VARIANTS, 'build', value => {
+          if (value.includes('|') || value.includes(',')) {
+            return `Invalid ?build=${JSON.stringify(value)} — pick one: full, split, or sourcemap.`;
+          }
+          return `Unknown build variant ${JSON.stringify(value)}.\nTry ?build=full, ?build=split, or ?build=sourcemap.`;
+        }) || 'split'
+      : 'split';
+
   /** @type {LoadMode} */
   const load =
     parseEnumParam(params.get('load'), LOAD_MODES, 'load', value => {
@@ -138,7 +170,7 @@ export function getHarnessConfig() {
       return `Unknown load mode ${JSON.stringify(value)}.\nTry ?load=streaming, ?load=instantiate, or ?load=default.`;
     }) || 'streaming';
 
-  const assets = backend.resolveAssets(symbols);
+  const assets = backend.resolveAssets(symbols, build);
 
   return {
     backendId: backend.id,
@@ -147,13 +179,17 @@ export function getHarnessConfig() {
     loader: backend.loader,
     load,
     symbols,
+    build,
     glueGlobal: backend.glueGlobal,
     glueScript: assets.glueScript,
     wasmUrl: new URL(assets.wasmRel, window.location.href).href,
+    debugUploadRel: assets.debugUploadRel,
     startRunner: backend.runner,
   };
 }
 
 export function formatHarnessBanner(config) {
-  return `${config.backendLabel} · ${config.language} · load=${config.load} · symbols=${config.symbols ? 'on' : 'off'}`;
+  const buildPart =
+    config.backendId === 'emscripten-raycast' && config.symbols ? ` · build=${config.build}` : '';
+  return `${config.backendLabel} · ${config.language} · load=${config.load} · symbols=${config.symbols ? 'on' : 'off'}${buildPart}`;
 }
