@@ -11,14 +11,14 @@ export async function importBindgenGlue(glueScript) {
  * @param {object} options
  * @param {(module_or_path?: unknown) => Promise<unknown>} options.init wasm-bindgen default export
  * @param {string} options.wasmUrl
- * @param {'streaming' | 'instantiate' | 'default'} options.load
+ * @param {'streaming' | 'non-streaming' | 'default'} options.load
  */
 export async function loadWasmBindgenModule({ init, wasmUrl, load }) {
   if (load === 'default') {
     return init(wasmUrl);
   }
 
-  if (load === 'instantiate') {
+  if (load === 'non-streaming') {
     const bytes = await fetch(wasmUrl).then(response => response.arrayBuffer());
     return init(bytes);
   }
@@ -35,11 +35,11 @@ export async function loadWasmBindgenModule({ init, wasmUrl, load }) {
  * @param {object} options
  * @param {(...args: unknown[]) => Promise<unknown>} options.createModule
  * @param {string} options.wasmUrl
- * @param {'streaming' | 'instantiate' | 'default'} options.load
+ * @param {'streaming' | 'non-streaming' | 'default'} options.load
  * @param {Record<string, unknown>} [options.moduleConfig]
  */
 export async function loadEmscriptenModule({ createModule, wasmUrl, load, moduleConfig = {} }) {
-  if (load !== 'default' && load !== 'instantiate' && load !== 'streaming') {
+  if (load !== 'default' && load !== 'non-streaming' && load !== 'streaming') {
     throw new Error(`Invalid load mode ${JSON.stringify(load)}`);
   }
 
@@ -47,7 +47,7 @@ export async function loadEmscriptenModule({ createModule, wasmUrl, load, module
     return createModule(moduleConfig);
   }
 
-  if (load === 'instantiate') {
+  if (load === 'non-streaming') {
     return new Promise((resolve, reject) => {
       createModule({
         ...moduleConfig,
@@ -56,7 +56,7 @@ export async function loadEmscriptenModule({ createModule, wasmUrl, load, module
             .then(response => response.arrayBuffer())
             .then(bytes => WebAssembly.instantiate(bytes, imports))
             .then(({ instance }) => {
-              console.log('[wasm] loaded via instantiate(bytes)', { url: wasmUrl, instance });
+              console.log('[wasm] loaded via non-streaming (arrayBuffer)', { url: wasmUrl, instance });
               emscriptenReady(instance);
             })
             .catch(reject);

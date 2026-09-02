@@ -34,7 +34,7 @@ src/
 Open `/web/?backend=emscripten-opengl`. Same URL params as raycast:
 
 - `?symbols=0` — nosym build
-- `?load=streaming` (default) · `?load=instantiate` · `?load=default`
+- `?load=streaming` (default) · `?load=non-streaming` · `?load=default`
 
 The JS runner passes the shared `#screen` canvas to Emscripten so GL draws directly — no `putImageData`.
 

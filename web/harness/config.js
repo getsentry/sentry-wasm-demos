@@ -1,5 +1,5 @@
 /** @typedef {'emscripten-raycast' | 'emscripten-opengl' | 'rust'} BackendId */
-/** @typedef {'streaming' | 'instantiate' | 'default'} LoadMode */
+/** @typedef {'streaming' | 'non-streaming' | 'default'} LoadMode */
 /** @typedef {'full' | 'split' | 'sourcemap' | 'dev' | 'release-debug' | 'release-stripped'} BuildVariant */
 /** @typedef {'emscripten' | 'wasm-bindgen'} BackendLoader */
 /** @typedef {'cpp' | 'rust'} BackendLanguage */
@@ -106,7 +106,7 @@ const BACKENDS = {
   },
 };
 
-const LOAD_MODES = /** @type {const} */ (['streaming', 'instantiate', 'default']);
+const LOAD_MODES = /** @type {const} */ (['streaming', 'non-streaming', 'default']);
 const SYMBOLS_VALUES = /** @type {const} */ (['0', '1']);
 
 function assertQuerySeparators(search) {
@@ -198,9 +198,9 @@ export function getHarnessConfig() {
   const load =
     parseEnumParam(params.get('load'), LOAD_MODES, 'load', value => {
       if (value.includes('|') || value.includes(',')) {
-        return `Invalid ?load=${JSON.stringify(value)} — pick one mode: streaming, instantiate, or default.`;
+        return `Invalid ?load=${JSON.stringify(value)} — pick one mode: streaming, non-streaming, or default.`;
       }
-      return `Unknown load mode ${JSON.stringify(value)}.\nTry ?load=streaming, ?load=instantiate, or ?load=default.`;
+      return `Unknown load mode ${JSON.stringify(value)}.\nTry ?load=streaming, ?load=non-streaming, or ?load=default.`;
     }) || 'streaming';
 
   const assets = backend.resolveAssets(symbols, build);

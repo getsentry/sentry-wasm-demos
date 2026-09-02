@@ -6,7 +6,7 @@ import { Sentry, sentryDsnSet } from '../sentry-init.js';
  * @property {string} backendLabel
  * @property {'cpp' | 'rust'} language
  * @property {string} loader
- * @property {'streaming' | 'instantiate' | 'default'} load
+ * @property {'streaming' | 'non-streaming' | 'default'} load
  * @property {'full' | 'split' | 'sourcemap' | 'dev' | 'release-debug' | 'release-stripped' | null} build
  * @property {boolean} symbols
  * @property {string} wasmUrl

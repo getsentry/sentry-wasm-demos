@@ -131,18 +131,18 @@ Requires `make symbols` for default / `?symbols=1`, and `make no-symbols` for `?
 | --------- | ------------------------------------------------- | -------------------- | ---------------------------------------- |
 | `backend` | `emscripten-raycast`, `emscripten-opengl`, `rust` | `emscripten-raycast` | backend build |
 | `build`   | `full`, `split`, `sourcemap`                      | `split`              | emscripten-raycast only (`make` targets) |
-| `load`    | `streaming`, `instantiate`, `default`             | `streaming`          | per `build` / `symbols`                  |
+| `load`    | `streaming`, `non-streaming`, `default` (all backends) | `streaming`          | per `build` / `symbols`                  |
 | `symbols` | `1` / `0`                                         | `1`                  | `make no-symbols` for `?symbols=0`       |
 
 
 Examples (use `&` between params, one value each — not `|`):
 
-- [http://localhost:8080/web/?load=instantiate](http://localhost:8080/web/?load=instantiate)
+- [http://localhost:8080/web/?load=non-streaming](http://localhost:8080/web/?load=non-streaming)
 - [http://localhost:8080/web/?symbols=0](http://localhost:8080/web/?symbols=0)
 - [http://localhost:8080/web/?backend=emscripten-opengl](http://localhost:8080/web/?backend=emscripten-opengl)
 - [http://localhost:8080/web/?backend=rust](http://localhost:8080/web/?backend=rust)
 
-Invalid values (e.g. `?load=streaming|instantiate|default`) fail fast with a red error under the canvas instead of loading silently.
+Invalid values (e.g. `?load=streaming|non-streaming|default`) fail fast with a red error under the canvas instead of loading silently.
 
 ## Build variants (emscripten-raycast)
 
@@ -187,7 +187,7 @@ Upload success looks like: `UPLOADED ... (maze.debug.wasm; wasm32 library)`.
 
 1. `SENTRY_DSN` in `web/.env`, `npm run build:js`
 2. `make clean && make && make symbols && make no-symbols`, upload debug wasm (with `source web/.env` — see above)
-3. Open `/web/` (not `?symbols=0`, not `?load=instantiate`), click **WASM deep crash**
+3. Open `/web/` (not `?symbols=0`, not `?load=non-streaming`), click **WASM deep crash**
 
 In the Sentry issue, check:
 
