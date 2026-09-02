@@ -280,6 +280,15 @@ h1 {
   background: rgba(255, 69, 168, 0.12);
 }
 
+#trigger-wasm-worker {
+  border-color: #c084fc;
+  color: #c084fc;
+}
+
+#trigger-wasm-worker:hover {
+  background: rgba(192, 132, 252, 0.12);
+}
+
 #trigger-webgl-context-lost {
   border-color: #ffb84d;
   color: #ffb84d;

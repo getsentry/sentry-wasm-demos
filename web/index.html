@@ -36,11 +36,12 @@
 
       <section class="sentry-panel" aria-labelledby="sentry-panel-title">
         <h2 id="sentry-panel-title">Sentry tests</h2>
-        <p class="sentry-help">JS error · wasm divzero · wasm deep stack · WebGL context lost (OpenGL only)</p>
+        <p class="sentry-help">JS error · wasm divzero · wasm deep stack · wasm worker · WebGL context lost (OpenGL only)</p>
         <div class="sentry-buttons">
           <button id="report-js-error" type="button">Report test error</button>
           <button id="trigger-wasm-divzero" type="button">WASM divzero</button>
           <button id="trigger-wasm-deep" type="button">WASM deep crash</button>
+          <button id="trigger-wasm-worker" type="button">WASM worker crash</button>
           <button id="trigger-webgl-context-lost" type="button" hidden>WebGL context lost</button>
         </div>
         <p id="sentry-feedback" class="sentry-feedback" aria-live="polite"></p>

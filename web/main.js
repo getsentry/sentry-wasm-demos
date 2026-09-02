@@ -4,6 +4,7 @@ import { getCreateModule, loadGlueScript } from './harness/loaders.js';
 import { wireHarnessPresets } from './harness/presets.js';
 import { applyHarnessContext } from './harness/sentry-context.js';
 import { setBackendBadge } from './harness/sentry-tests.js';
+import { wireWasmWorkerCrashTest } from './harness/worker-crash.js';
 
 wireHarnessPresets();
 
@@ -11,6 +12,7 @@ async function main() {
   const config = getHarnessConfig();
   applyHarnessContext(config);
   setBackendBadge(formatHarnessBanner(config));
+  wireWasmWorkerCrashTest(config);
 
   const runnerModule = await config.startRunner();
   if (typeof runnerModule.start !== 'function') {

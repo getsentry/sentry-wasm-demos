@@ -18,14 +18,25 @@ const shared = {
   },
 };
 
+const worker = {
+  entryPoints: [join(root, 'workers/wasm-worker.js')],
+  bundle: true,
+  format: 'esm',
+  outfile: join(root, 'wasm-worker.js'),
+  sourcemap: true,
+};
+
 const watch = process.argv.includes('--watch');
 
 if (watch) {
   const ctx = await build({ ...shared, watch: true });
   await ctx.watch();
+  const workerCtx = await build({ ...worker, watch: true });
+  await workerCtx.watch();
   console.log('[build] watching…');
 } else {
   await build(shared);
+  await build(worker);
 }
 
 if (dsn) {

@@ -19,6 +19,10 @@ web/maze.debug.wasm
 web/node_modules/
 web/app.js
 web/app.js.map
+web/rust-wasm-worker.js
+web/rust-wasm-worker.js.map
+web/wasm-worker.js
+web/wasm-worker.js.map
 web/.env
 web/package-lock.json
 

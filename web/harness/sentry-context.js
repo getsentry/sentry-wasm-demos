@@ -52,7 +52,7 @@ export function applyHarnessContext(config) {
 }
 
 /**
- * @typedef {'divzero' | 'deep_stack' | 'js_test'} HarnessCrashType
+ * @typedef {'divzero' | 'deep_stack' | 'js_test' | 'worker'} HarnessCrashType
  */
 
 /**
