@@ -7,6 +7,7 @@ import { Sentry, sentryDsnSet } from '../sentry-init.js';
  * @property {'cpp' | 'rust' | 'csharp'} language
  * @property {string} loader
  * @property {'streaming' | 'non-streaming' | 'default'} load
+ * @property {'caught' | 'uncaught'} crashMode
  * @property {'full' | 'split' | 'sourcemap' | 'dev' | 'release-debug' | 'release-stripped' | 'full-stack' | 'full-no-stack' | 'explicit' | 'none' | null} build
  * @property {boolean} symbols
  * @property {string} wasmUrl
@@ -33,6 +34,7 @@ export function applyHarnessContext(config) {
     'wasm.language': config.language,
     'wasm.loader': config.loader,
     'wasm.load': config.load,
+    'wasm.capture_mode': config.crashMode,
     'wasm.symbols': config.symbols ? 'on' : 'off',
     ...(config.build ? { 'wasm.build': config.build } : {}),
   });
@@ -43,6 +45,7 @@ export function applyHarnessContext(config) {
     language: config.language,
     loader: config.loader,
     load_mode: config.load,
+    capture_mode: config.crashMode,
     build_variant: config.build,
     symbols: config.symbols,
     wasm_url: config.wasmUrl,
@@ -72,6 +75,9 @@ export function captureHarnessException(err, crashType, options = {}) {
 
   Sentry.withScope(scope => {
     scope.setTag('wasm.crash_type', crashType);
+    if (harnessConfig?.crashMode) {
+      scope.setTag('wasm.capture_mode', harnessConfig.crashMode);
+    }
     if (harnessConfig?.build) {
       scope.setTag('wasm.build', harnessConfig.build);
     }
@@ -83,6 +89,7 @@ export function captureHarnessException(err, crashType, options = {}) {
       backend_id: harnessConfig?.backendId ?? null,
       build_variant: harnessConfig?.build ?? null,
       load_mode: harnessConfig?.load ?? null,
+      capture_mode: harnessConfig?.crashMode ?? null,
       symbols: harnessConfig?.symbols ?? null,
       debug_upload_rel: harnessConfig?.debugUploadRel ?? null,
       original_message: err instanceof Error ? err.message : String(err),

@@ -1,4 +1,5 @@
 #include "game.h"
+#include "chaos/chaos.h"
 
 #include <cstdint>
 
@@ -17,6 +18,7 @@ void handle_key(int key_code, int down) {
 }
 
 void step_game(float dt_ms) {
+    run_pending_crash();
     game.step(dt_ms);
 }
 

@@ -1,6 +1,7 @@
 import { captureHarnessException } from './sentry-context.js';
 import { trimRustPanicMessage } from './rust-panic.js';
 import { sentryDsnSet } from '../sentry-init.js';
+import { armPendingCrashType, syncCrashQueryInUrl } from './emscripten-crash.js';
 
 /**
  * @param {() => void} fn
@@ -96,16 +97,58 @@ function wireJsTestErrorButton() {
   });
 }
 
-export function wireSentryTestButtons(getModule) {
+/**
+ * @param {() => object} getModule
+ * @param {{ crashMode?: 'caught' | 'uncaught' }} [options] `crashMode` arms C++ pending crash for emscripten loops
+ */
+export function wireSentryTestButtons(getModule, options = {}) {
   wireJsTestErrorButton();
 
+  const crashMode = options.crashMode;
+  const armInLoop = crashMode === 'caught' || crashMode === 'uncaught';
+
+  if (armInLoop) {
+    const help = document.querySelector('.sentry-help');
+    if (help) {
+      help.textContent = `WASM divzero/deep arm a flag; trap runs in step_game (capture=${crashMode}). Worker unchanged.`;
+    }
+  }
+
   document.getElementById('trigger-wasm-divzero')?.addEventListener('click', () => {
+    if (armInLoop) {
+      armLoopCrash(getModule(), 'arm_crash_divzero', 'divzero', 'divzero', crashMode);
+      return;
+    }
     callWasmCrash(getModule(), 'trigger_crash_divzero', 'WASM divzero', 'divzero');
   });
 
   document.getElementById('trigger-wasm-deep')?.addEventListener('click', () => {
+    if (armInLoop) {
+      armLoopCrash(getModule(), 'arm_crash_deep', 'deep stack', 'deep_stack', crashMode);
+      return;
+    }
     callWasmCrash(getModule(), 'trigger_crash_deep', 'WASM deep stack', 'deep_stack');
   });
+}
+
+/**
+ * @param {object} mod
+ * @param {string} exportName
+ * @param {string} label
+ * @param {import('./sentry-context.js').HarnessCrashType} crashType
+ * @param {'caught' | 'uncaught'} crashMode
+ */
+function armLoopCrash(mod, exportName, label, crashType, crashMode) {
+  const fn = mod[`_${exportName}`];
+  if (typeof fn !== 'function') {
+    showSentryFeedback(`${exportName} missing — run make and hard-refresh`);
+    return;
+  }
+
+  syncCrashQueryInUrl(crashMode);
+  armPendingCrashType(crashType);
+  fn();
+  showSentryFeedback(`Armed ${label} — fires next step_game (capture=${crashMode})`);
 }
 
 /**

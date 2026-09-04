@@ -36,7 +36,7 @@
 
       <section class="sentry-panel" aria-labelledby="sentry-panel-title">
         <h2 id="sentry-panel-title">Sentry tests</h2>
-        <p class="sentry-help">JS error · wasm divzero · wasm deep stack · wasm worker · WebGL context lost (OpenGL only)</p>
+        <p class="sentry-help">JS error · wasm divzero / deep (arm → step_game) · wasm worker · WebGL context lost (OpenGL only)</p>
         <div class="sentry-buttons">
           <button id="report-js-error" type="button">Report test error</button>
           <button id="trigger-wasm-divzero" type="button">WASM divzero</button>
@@ -137,6 +137,13 @@
             >
           </li>
           
+          <li>
+            C++ crash capture (raycast / opengl):
+            <a class="harness-preset" data-harness-preset="crash=caught" href="?crash=caught"><code>?crash=caught</code></a>
+            (default — <code>captureHarnessException</code>) ·
+            <a class="harness-preset" data-harness-preset="crash=uncaught" href="?crash=uncaught"><code>?crash=uncaught</code></a>
+            (GlobalHandlers only)
+          </li>
           <li>
             Load (all backends):
             <a class="harness-preset" data-harness-preset="load=streaming" href="?load=streaming"

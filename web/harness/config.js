@@ -1,5 +1,6 @@
 /** @typedef {'emscripten-raycast' | 'emscripten-opengl' | 'rust' | 'unity'} BackendId */
 /** @typedef {'streaming' | 'non-streaming' | 'default'} LoadMode */
+/** @typedef {'caught' | 'uncaught'} CrashMode */
 /** @typedef {'full' | 'split' | 'sourcemap' | 'dev' | 'release-debug' | 'release-stripped' | 'full-stack' | 'full-no-stack' | 'explicit' | 'none'} BuildVariant */
 /** @typedef {'emscripten' | 'wasm-bindgen' | 'unity'} BackendLoader */
 /** @typedef {'cpp' | 'rust' | 'csharp'} BackendLanguage */
@@ -140,6 +141,7 @@ const BACKENDS = {
 };
 
 const LOAD_MODES = /** @type {const} */ (['streaming', 'non-streaming', 'default']);
+const CRASH_MODES = /** @type {const} */ (['caught', 'uncaught']);
 const SYMBOLS_VALUES = /** @type {const} */ (['0', '1']);
 
 function assertQuerySeparators(search) {
@@ -199,7 +201,7 @@ function resolveBuildVariant(backend, raw) {
 }
 
 /**
- * Harness options from URL query (?backend=&build=&load=&symbols=).
+ * Harness options from URL query (?backend=&build=&load=&symbols=&crash=).
  */
 export function getHarnessConfig() {
   assertQuerySeparators(window.location.search);
@@ -236,6 +238,15 @@ export function getHarnessConfig() {
       return `Unknown load mode ${JSON.stringify(value)}.\nTry ?load=streaming, ?load=non-streaming, or ?load=default.`;
     }) || 'streaming';
 
+  /** @type {CrashMode} */
+  const crashMode =
+    parseEnumParam(params.get('crash'), CRASH_MODES, 'crash', value => {
+      if (value.includes('|') || value.includes(',')) {
+        return `Invalid ?crash=${JSON.stringify(value)} — pick one: caught or uncaught.`;
+      }
+      return `Unknown crash mode ${JSON.stringify(value)}.\nTry ?crash=caught or ?crash=uncaught.`;
+    }) || 'caught';
+
   const isUnity = backend.id === 'unity';
 
   const assets = backend.resolveAssets(symbols, build);
@@ -247,6 +258,7 @@ export function getHarnessConfig() {
     language: backend.language,
     loader: backend.loader,
     load,
+    crashMode,
     symbols: effectiveSymbols,
     build,
     glueGlobal: backend.glueGlobal,
@@ -277,5 +289,6 @@ export function formatHarnessBanner(config) {
   const buildPart = config.build ? ` · build=${config.build}` : '';
   const symbolsPart =
     config.backendId === 'rust' ? '' : ` · symbols=${config.symbols ? 'on' : 'off'}`;
-  return `${config.backendLabel} · ${config.language} · load=${config.load}${symbolsPart}${buildPart}`;
+  const capturePart = config.loader === 'emscripten' ? ` · capture=${config.crashMode}` : '';
+  return `${config.backendLabel} · ${config.language} · load=${config.load}${symbolsPart}${buildPart}${capturePart}`;
 }

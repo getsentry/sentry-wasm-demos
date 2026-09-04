@@ -1,5 +1,6 @@
 import { loadEmscriptenModule } from '../harness/loaders.js';
 import { wireSentryTestButtons } from '../harness/sentry-tests.js';
+import { createStepGameController, peekPendingCrashType } from '../harness/emscripten-crash.js';
 
 const canvas = document.getElementById('screen');
 const ctx = canvas.getContext('2d');
@@ -13,6 +14,8 @@ let mod = null;
 let imageData = null;
 let lastTime = 0;
 let level = 1;
+/** @type {ReturnType<typeof createStepGameController> | null} */
+let stepCtrl = null;
 
 function initGame(seed, nextLevel = level) {
   for (const code of KEYS) {
@@ -55,8 +58,8 @@ function drawFrame() {
 function loop(now) {
   const dt = lastTime ? now - lastTime : 0;
   lastTime = now;
-  if (!mod._game_won()) {
-    mod._step_game(dt);
+  if (!mod._game_won() || peekPendingCrashType()) {
+    stepCtrl?.stepGame(dt);
   }
   drawFrame();
   requestAnimationFrame(loop);
@@ -99,6 +102,7 @@ export async function start(config) {
     initGame((Math.random() * 0x7fffffff) | 0, level + 1),
   );
 
-  wireSentryTestButtons(() => mod);
+  wireSentryTestButtons(() => mod, { crashMode: config.crashMode });
+  stepCtrl = createStepGameController({ getMod: () => mod, crashMode: config.crashMode });
   requestAnimationFrame(loop);
 }

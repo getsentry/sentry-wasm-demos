@@ -1,6 +1,7 @@
 import { loadEmscriptenModule } from '../harness/loaders.js';
 import { wireSentryTestButtons } from '../harness/sentry-tests.js';
 import { wireWebGlContextLossTest } from '../harness/webgl-crash.js';
+import { createStepGameController, peekPendingCrashType } from '../harness/emscripten-crash.js';
 
 const canvas = document.getElementById('screen');
 const status = document.getElementById('status');
@@ -12,6 +13,8 @@ const KEYS = new Set([87, 65, 83, 68, 37, 38, 39, 40]);
 let mod = null;
 let lastTime = 0;
 let level = 1;
+/** @type {ReturnType<typeof createStepGameController> | null} */
+let stepCtrl = null;
 
 function initGame(seed, nextLevel = level) {
   for (const code of KEYS) {
@@ -38,8 +41,8 @@ function updateHud() {
 function loop(now) {
   const dt = lastTime ? now - lastTime : 0;
   lastTime = now;
-  if (!mod._game_won()) {
-    mod._step_game(dt);
+  if (!mod._game_won() || peekPendingCrashType()) {
+    stepCtrl?.stepGame(dt);
   }
   mod._render_frame();
   updateHud();
@@ -85,7 +88,8 @@ export async function start(config) {
     initGame((Math.random() * 0x7fffffff) | 0, level + 1),
   );
 
-  wireSentryTestButtons(() => mod);
+  wireSentryTestButtons(() => mod, { crashMode: config.crashMode });
   wireWebGlContextLossTest(canvas, () => mod);
+  stepCtrl = createStepGameController({ getMod: () => mod, crashMode: config.crashMode });
   requestAnimationFrame(loop);
 }
