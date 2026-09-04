@@ -1,0 +1,45 @@
+# Unity regenerates these — never commit.
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+[Ss]ysinfo/
+[Uu]nityGenerated/
+
+# IDE / OS
+.vs/
+.idea/
+*.csproj
+*.sln
+*.user
+*.userprefs
+*.unityproj
+*.booproj
+.DS_Store
+Thumbs.db
+
+# Burst / IL2CPP / Bee scratch
+*.burst
+*.pidb
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.apk
+*.aab
+*.unitypackage
+
+# WebGL player output (canonical copy lives in web/assets/unity/ via WebGlCoverageBuild)
+Build/
+WebGL/
+ExportedObj/
+
+# Batch builds bake SENTRY_DSN into this asset — do not commit.
+Assets/Resources/Sentry/SentryOptions.asset
+Assets/Resources/Sentry/SentryOptions.asset.meta

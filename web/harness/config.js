@@ -1,8 +1,18 @@
-/** @typedef {'emscripten-raycast' | 'emscripten-opengl' | 'rust'} BackendId */
+/** @typedef {'emscripten-raycast' | 'emscripten-opengl' | 'rust' | 'unity'} BackendId */
 /** @typedef {'streaming' | 'non-streaming' | 'default'} LoadMode */
-/** @typedef {'full' | 'split' | 'sourcemap' | 'dev' | 'release-debug' | 'release-stripped'} BuildVariant */
-/** @typedef {'emscripten' | 'wasm-bindgen'} BackendLoader */
-/** @typedef {'cpp' | 'rust'} BackendLanguage */
+/** @typedef {'full' | 'split' | 'sourcemap' | 'dev' | 'release-debug' | 'release-stripped' | 'full-stack' | 'full-no-stack' | 'explicit' | 'none'} BuildVariant */
+/** @typedef {'emscripten' | 'wasm-bindgen' | 'unity'} BackendLoader */
+/** @typedef {'cpp' | 'rust' | 'csharp'} BackendLanguage */
+
+/**
+ * @typedef {object} ResolvedAssets
+ * @property {string} glueScript
+ * @property {string} wasmRel
+ * @property {string | null} debugUploadRel
+ * @property {string} [dataRel]
+ * @property {string} [frameworkRel]
+ * @property {string} [streamingAssetsRel]
+ */
 
 /**
  * @typedef {object} BackendConfig
@@ -13,7 +23,7 @@
  * @property {string | null} glueGlobal
  * @property {BackendLoader} loader
  * @property {readonly BuildVariant[] | null} buildVariants first entry is the default
- * @property {(symbols: boolean, build: BuildVariant | null) => { glueScript: string, wasmRel: string, debugUploadRel: string | null }} resolveAssets
+ * @property {(symbols: boolean, build: BuildVariant | null) => ResolvedAssets} resolveAssets
  * @property {() => Promise<{ start: Function }>} runner
  */
 
@@ -104,6 +114,29 @@ const BACKENDS = {
     },
     runner: () => import('../backends/rust.js'),
   },
+  unity: {
+    id: 'unity',
+    label: 'Unity · WebGL',
+    language: 'csharp',
+    assetDir: 'assets/unity',
+    glueGlobal: null,
+    loader: 'unity',
+    buildVariants: ['none', 'full-stack', 'full-no-stack', 'explicit'],
+    resolveAssets(_symbols, build) {
+      const slug = build || 'none';
+      const dir = `${this.assetDir}/${slug}`;
+      const base = `${dir}/Build/${slug}`;
+      return {
+        glueScript: `${base}.loader.js`,
+        wasmRel: `${base}.wasm`,
+        debugUploadRel: null,
+        dataRel: `${base}.data`,
+        frameworkRel: `${base}.framework.js`,
+        streamingAssetsRel: `${dir}/StreamingAssets`,
+      };
+    },
+    runner: () => import('../backends/unity.js'),
+  },
 };
 
 const LOAD_MODES = /** @type {const} */ (['streaming', 'non-streaming', 'default']);
@@ -179,7 +212,7 @@ export function getHarnessConfig() {
 
   if (!backend) {
     throw new Error(
-      `Unknown backend ${JSON.stringify(backendId)}.\nTry ?backend=emscripten-raycast (or emscripten-opengl, rust).`,
+      `Unknown backend ${JSON.stringify(backendId)}.\nTry ?backend=emscripten-raycast (or emscripten-opengl, rust, unity).`,
     );
   }
 
@@ -203,6 +236,8 @@ export function getHarnessConfig() {
       return `Unknown load mode ${JSON.stringify(value)}.\nTry ?load=streaming, ?load=non-streaming, or ?load=default.`;
     }) || 'streaming';
 
+  const isUnity = backend.id === 'unity';
+
   const assets = backend.resolveAssets(symbols, build);
   const effectiveSymbols = backend.id === 'rust' ? build !== 'release-stripped' : symbols;
 
@@ -218,11 +253,27 @@ export function getHarnessConfig() {
     glueScript: assets.glueScript,
     wasmUrl: new URL(assets.wasmRel, window.location.href).href,
     debugUploadRel: assets.debugUploadRel,
+    unityAssets: isUnity
+      ? {
+          loaderUrl: new URL(assets.glueScript, window.location.href).href,
+          dataUrl: new URL(/** @type {string} */ (assets.dataRel), window.location.href).href,
+          frameworkUrl: new URL(/** @type {string} */ (assets.frameworkRel), window.location.href)
+            .href,
+          codeUrl: new URL(assets.wasmRel, window.location.href).href,
+          streamingAssetsUrl: new URL(
+            /** @type {string} */ (assets.streamingAssetsRel),
+            window.location.href,
+          ).href,
+        }
+      : null,
     startRunner: backend.runner,
   };
 }
 
 export function formatHarnessBanner(config) {
+  if (config.backendId === 'unity') {
+    return `${config.backendLabel} · ${config.language} · load=${config.load} · exceptionSupport=${config.build}`;
+  }
   const buildPart = config.build ? ` · build=${config.build}` : '';
   const symbolsPart =
     config.backendId === 'rust' ? '' : ` · symbols=${config.symbols ? 'on' : 'off'}`;

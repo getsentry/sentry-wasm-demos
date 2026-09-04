@@ -4,10 +4,10 @@ import { Sentry, sentryDsnSet } from '../sentry-init.js';
  * @typedef {object} HarnessSentryConfig
  * @property {string} backendId
  * @property {string} backendLabel
- * @property {'cpp' | 'rust'} language
+ * @property {'cpp' | 'rust' | 'csharp'} language
  * @property {string} loader
  * @property {'streaming' | 'non-streaming' | 'default'} load
- * @property {'full' | 'split' | 'sourcemap' | 'dev' | 'release-debug' | 'release-stripped' | null} build
+ * @property {'full' | 'split' | 'sourcemap' | 'dev' | 'release-debug' | 'release-stripped' | 'full-stack' | 'full-no-stack' | 'explicit' | 'none' | null} build
  * @property {boolean} symbols
  * @property {string} wasmUrl
  * @property {string} glueScript

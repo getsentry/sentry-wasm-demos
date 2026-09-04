@@ -2,7 +2,7 @@
 
 Multi-backend harness for testing `@sentry/browser` + `@sentry/wasm` across toolchains.
 
-**Live today:** Emscripten CPU raycast maze · Emscripten WebGL 3D maze · Rust wasm-bindgen crashes
+**Live today:** Emscripten CPU raycast maze · Emscripten WebGL 3D maze · Rust wasm-bindgen crashes · Unity WebGL (IL2CPP + `@sentry/wasm`)
 
 Same web page, same Sentry test buttons — swap WASM backend via URL.
 
@@ -13,6 +13,7 @@ backends/
   emscripten-raycast/   C++ CPU raycast → web/assets/emscripten-raycast/
   emscripten-opengl/    WebGL 3D maze → web/assets/emscripten-opengl/
   rust/                 wasm-bindgen crash demo → web/assets/rust/
+  unity/                Unity WebGL (no Unity SDK) → web/assets/unity/<slug>/
 web/
   harness/              config, loaders, sentry test helpers
   backends/             per-backend JS runners
@@ -129,10 +130,10 @@ Requires `make symbols` for default / `?symbols=1`, and `make no-symbols` for `?
 
 | Param     | Values                                            | Default              | Needs                                    |
 | --------- | ------------------------------------------------- | -------------------- | ---------------------------------------- |
-| `backend` | `emscripten-raycast`, `emscripten-opengl`, `rust` | `emscripten-raycast` | backend build |
-| `build`   | `full`, `split`, `sourcemap`                      | `split`              | emscripten-raycast only (`make` targets) |
-| `load`    | `streaming`, `non-streaming`, `default` (all backends) | `streaming`          | per `build` / `symbols`                  |
-| `symbols` | `1` / `0`                                         | `1`                  | `make no-symbols` for `?symbols=0`       |
+| `backend` | `emscripten-raycast`, `emscripten-opengl`, `rust`, `unity` | `emscripten-raycast` | backend build |
+| `build`   | raycast `full`/`split`/`sourcemap`; rust `dev`/…; unity `full-stack`/`full-no-stack`/`explicit`/`none` | per backend | backend build |
+| `load`    | `streaming`, `non-streaming`, `default`           | `streaming`          | per `build` / `symbols`                  |
+| `symbols` | `1` / `0`                                         | `1`                  | `make no-symbols` for `?symbols=0` (N/A for Unity assets) |
 
 
 Examples (use `&` between params, one value each — not `|`):
@@ -141,6 +142,7 @@ Examples (use `&` between params, one value each — not `|`):
 - [http://localhost:8080/web/?symbols=0](http://localhost:8080/web/?symbols=0)
 - [http://localhost:8080/web/?backend=emscripten-opengl](http://localhost:8080/web/?backend=emscripten-opengl)
 - [http://localhost:8080/web/?backend=rust](http://localhost:8080/web/?backend=rust)
+- [http://localhost:8080/web/?backend=unity](http://localhost:8080/web/?backend=unity)
 
 Invalid values (e.g. `?load=streaming|non-streaming|default`) fail fast with a red error under the canvas instead of loading silently.
 
@@ -204,6 +206,11 @@ Use default URL `/web/` with badge `symbols=on` · `load=streaming` for symbolic
 2. Add runner in `web/backends/<name>.js` exporting `start(config)`
 3. Register in `web/harness/config.js`
 4. Reuse `web/harness/sentry-tests.js` for crash buttons
+
+**Unity** (`backends/unity/`): IL2CPP WebGL player, captured by `@sentry/browser` +
+`@sentry/wasm` like the other backends (no `io.sentry.unity`). Build with `make unity`,
+open [http://localhost:8080/web/?backend=unity](http://localhost:8080/web/?backend=unity).
+Coverage: [docs/COVERAGE_MATRIX.md](docs/COVERAGE_MATRIX.md) Part 2–3.
 
 
 

@@ -5,6 +5,18 @@ web/assets/emscripten-opengl/*
 !web/assets/emscripten-opengl/.gitkeep
 web/assets/rust/*
 !web/assets/rust/.gitkeep
+web/assets/unity/**
+!web/assets/unity/.gitkeep
+
+# Unity editor cache + local WebGL scratch (see also backends/unity/.gitignore)
+backends/unity/Library/
+backends/unity/Temp/
+backends/unity/Logs/
+backends/unity/Build/
+backends/unity/WebGL/
+backends/unity/UserSettings/
+backends/unity/MemoryCaptures/
+backends/unity/Recordings/
 
 # Legacy flat output (pre backends/ reorg)
 web/maze.js

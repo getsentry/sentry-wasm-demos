@@ -72,6 +72,10 @@
             wasm-bindgen crash demo
           </li>
           <li>
+            <a class="harness-preset" data-harness-preset="backend=unity" href="?backend=unity"><code>?backend=unity</code></a>
+            Unity WebGL (IL2CPP wasm, default none)
+          </li>
+          <li>
             C++ builds (raycast):
             <a class="harness-preset" data-harness-preset="build=full" href="?build=full"><code>?build=full</code></a>
             ·
@@ -101,6 +105,36 @@
               ><code>?backend=rust&amp;build=release-stripped</code></a
             >
             (debuginfo=0)
+          </li>
+          <li>
+            Unity exceptionSupport:
+            <a
+              class="harness-preset"
+              data-harness-preset="backend=unity&build=none"
+              href="?backend=unity&amp;build=none"
+              ><code>?backend=unity&amp;build=none</code></a
+            >
+            (default) ·
+            <a
+              class="harness-preset"
+              data-harness-preset="backend=unity&build=full-stack"
+              href="?backend=unity&amp;build=full-stack"
+              ><code>?build=full-stack</code></a
+            >
+            ·
+            <a
+              class="harness-preset"
+              data-harness-preset="backend=unity&build=full-no-stack"
+              href="?backend=unity&amp;build=full-no-stack"
+              ><code>?build=full-no-stack</code></a
+            >
+            ·
+            <a
+              class="harness-preset"
+              data-harness-preset="backend=unity&build=explicit"
+              href="?backend=unity&amp;build=explicit"
+              ><code>?build=explicit</code></a
+            >
           </li>
           
           <li>

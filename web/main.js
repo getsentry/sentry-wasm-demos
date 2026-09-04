@@ -12,14 +12,18 @@ async function main() {
   const config = getHarnessConfig();
   applyHarnessContext(config);
   setBackendBadge(formatHarnessBanner(config));
-  wireWasmWorkerCrashTest(config);
+
+  if (config.loader !== 'unity') {
+    wireWasmWorkerCrashTest(config);
+  }
 
   const runnerModule = await config.startRunner();
   if (typeof runnerModule.start !== 'function') {
     throw new Error(`Backend ${config.backendId} missing start()`);
   }
 
-  if (config.glueGlobal) {
+  // Unity loads its own loader.js inside the runner (glueGlobal is null, same as rust).
+  if (config.loader !== 'unity' && config.glueGlobal) {
     await loadGlueScript(config.glueScript);
     if (!getCreateModule(config.glueGlobal)) {
       throw new Error(`${config.glueGlobal} missing after loading ${config.glueScript}`);

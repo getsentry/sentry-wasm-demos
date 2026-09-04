@@ -77,19 +77,27 @@ export function callWasmCrash(mod, exportName, label, crashType) {
   );
 }
 
-export function wireSentryTestButtons(getModule) {
+function showSentryFeedback(message) {
+  const feedback = document.getElementById('sentry-feedback');
+  if (feedback) {
+    feedback.textContent = message;
+  }
+  console.log('[sentry test]', message);
+}
+
+function wireJsTestErrorButton() {
   document.getElementById('report-js-error')?.addEventListener('click', () => {
-    const feedback = document.getElementById('sentry-feedback');
     const err = new Error('js test');
     captureHarnessException(err, 'js_test');
     const message = sentryDsnSet
       ? 'Sent JS test error to Sentry — check Issues.'
       : 'captureException called — no DSN in build.';
-    if (feedback) {
-      feedback.textContent = message;
-    }
-    console.log('[sentry test]', message);
+    showSentryFeedback(message);
   });
+}
+
+export function wireSentryTestButtons(getModule) {
+  wireJsTestErrorButton();
 
   document.getElementById('trigger-wasm-divzero')?.addEventListener('click', () => {
     callWasmCrash(getModule(), 'trigger_crash_divzero', 'WASM divzero', 'divzero');
@@ -97,6 +105,66 @@ export function wireSentryTestButtons(getModule) {
 
   document.getElementById('trigger-wasm-deep')?.addEventListener('click', () => {
     callWasmCrash(getModule(), 'trigger_crash_deep', 'WASM deep stack', 'deep_stack');
+  });
+}
+
+/**
+ * Unity has no C wasm exports. JS test + C# throw (IL2CPP abort) go through @sentry/wasm.
+ * @param {() => { SendMessage: (objectName: string, methodName: string, value?: string) => void } | null} getUnityInstance
+ */
+export function wireUnitySentryButtons(getUnityInstance) {
+  const help = document.querySelector('.sentry-help');
+  if (help) {
+    help.textContent =
+      'C# deep crash is an IL2CPP abort — captured by @sentry/browser + @sentry/wasm (no Sentry Unity SDK).';
+  }
+
+  wireJsTestErrorButton();
+
+  const divzero = document.getElementById('trigger-wasm-divzero');
+  if (divzero) {
+    divzero.hidden = true;
+    divzero.disabled = true;
+    divzero.title = 'N/A (Unity — no C export)';
+  }
+
+  const worker = document.getElementById('trigger-wasm-worker');
+  if (worker) {
+    worker.hidden = true;
+    worker.disabled = true;
+    worker.title = 'N/A (Unity)';
+  }
+
+  const deep = document.getElementById('trigger-wasm-deep');
+  if (!deep) {
+    return;
+  }
+
+  deep.textContent = 'C# deep crash';
+  deep.addEventListener('click', () => {
+    const instance = getUnityInstance();
+    if (!instance || typeof instance.SendMessage !== 'function') {
+      showSentryFeedback('Unity player not ready — wait for load');
+      return;
+    }
+
+    showSentryFeedback('Calling C# deep crash…');
+    try {
+      instance.SendMessage('WasmCrashHarness', 'TriggerDeepCrash');
+      showSentryFeedback(
+        sentryDsnSet
+          ? 'C# throw returned (check Sentry if GlobalHandlers caught an abort).'
+          : 'C# throw returned — no DSN in build.',
+      );
+    } catch (err) {
+      console.error('[wasm crash]', err instanceof Error ? err.message : String(err));
+      captureHarnessException(err, 'deep_stack');
+      showSentryFeedback(
+        sentryDsnSet
+          ? `${err instanceof Error ? err.message : String(err)} — sent to Sentry (wasm.backend:unity).`
+          : `${err instanceof Error ? err.message : String(err)} — no DSN in build.`,
+      );
+    }
   });
 }
 
