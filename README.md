@@ -134,7 +134,7 @@ Requires `make symbols` for default / `?symbols=1`, and `make no-symbols` for `?
 | `build`   | raycast `full`/`split`/`sourcemap`; rust `dev`/…; unity `full-stack`/`full-no-stack`/`explicit`/`none` | per backend | backend build |
 | `load`    | `streaming`, `non-streaming`, `default`           | `streaming`          | per `build` / `symbols`                  |
 | `symbols` | `1` / `0`                                         | `1`                  | `make no-symbols` for `?symbols=0` (N/A for Unity assets) |
-| `crash`   | `caught`, `uncaught` (emscripten-raycast / opengl) | `caught`             | C++ backends; buttons arm, trap runs in `_step_game` |
+| `crash`   | `caught`, `uncaught` (emscripten-raycast / opengl) | `caught`             | C++ backends; divzero / deep / worker arm, trap runs in `_step_game` |
 
 
 Examples (use `&` between params, one value each — not `|`):
@@ -148,7 +148,7 @@ Examples (use `&` between params, one value each — not `|`):
 
 Invalid values (e.g. `?load=streaming|non-streaming|default`) fail fast with a red error under the canvas instead of loading silently.
 
-**`?crash=caught|uncaught`** (Emscripten C++ only): the divzero / deep **buttons only arm**. The trap runs at the start of the next `_step_game` (game-loop stack). `caught` (default) wraps that call in `try/catch` and sends via `captureHarnessException` (tags + fingerprint). `uncaught` has no try/catch — `@sentry/browser` GlobalHandlers report the `RuntimeError`. The rAF loop is not stopped after a one-shot trap (pending flag clears in C++; play continues). Worker / Rust / Unity buttons are unchanged.
+**`?crash=caught|uncaught`** (Emscripten C++ only): divzero / deep / **worker** buttons only **arm**. The trap runs at the start of the next `_step_game` (main rAF or the worker tick loop). `caught` (default) wraps that call in `try/catch` and sends via `captureHarnessException` (tags + fingerprint; worker tag stays `wasm.crash_type:worker`). `uncaught` has no try/catch — main thread uses GlobalHandlers; worker uses `webWorkerIntegration` (the page does **not** call `captureHarnessException`). Loops keep ticking after a one-shot trap (C++ pending flag clears). Rust worker still calls `trigger_crash_*` immediately (no game loop). Unity has no worker button.
 
 ## Build variants (emscripten-raycast)
 

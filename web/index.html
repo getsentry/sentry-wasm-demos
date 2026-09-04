@@ -36,7 +36,7 @@
 
       <section class="sentry-panel" aria-labelledby="sentry-panel-title">
         <h2 id="sentry-panel-title">Sentry tests</h2>
-        <p class="sentry-help">JS error · wasm divzero / deep (arm → step_game) · wasm worker · WebGL context lost (OpenGL only)</p>
+        <p class="sentry-help">JS error · wasm divzero / deep / worker (arm → step_game) · WebGL context lost (OpenGL only)</p>
         <div class="sentry-buttons">
           <button id="report-js-error" type="button">Report test error</button>
           <button id="trigger-wasm-divzero" type="button">WASM divzero</button>
@@ -84,6 +84,13 @@
             <a class="harness-preset" data-harness-preset="build=sourcemap" href="?build=sourcemap"
               ><code>?build=sourcemap</code></a
             >
+          </li>
+          <li>
+            C++ crash capture (raycast / opengl):
+            <a class="harness-preset" data-harness-preset="crash=caught" href="?crash=caught"><code>?crash=caught</code></a>
+            (default — <code>Sentry.captureException</code>) ·
+            <a class="harness-preset" data-harness-preset="crash=uncaught" href="?crash=uncaught"><code>?crash=uncaught</code></a>
+            (GlobalHandlers only)
           </li>
           <li>
             Rust builds:
@@ -136,14 +143,6 @@
               ><code>?build=explicit</code></a
             >
           </li>
-          
-          <li>
-            C++ crash capture (raycast / opengl):
-            <a class="harness-preset" data-harness-preset="crash=caught" href="?crash=caught"><code>?crash=caught</code></a>
-            (default — <code>captureHarnessException</code>) ·
-            <a class="harness-preset" data-harness-preset="crash=uncaught" href="?crash=uncaught"><code>?crash=uncaught</code></a>
-            (GlobalHandlers only)
-          </li>
           <li>
             Load (all backends):
             <a class="harness-preset" data-harness-preset="load=streaming" href="?load=streaming"
@@ -157,16 +156,6 @@
             <a class="harness-preset" data-harness-preset="load=default" href="?load=default"
               ><code>?load=default</code></a
             >
-          </li>
-          <li>
-            <a class="harness-preset" data-harness-preset="symbols=0" href="?symbols=0"><code>?symbols=0</code></a>
-            · <code>maze.nosym.*</code> build
-          </li>
-          <li>
-            <a class="harness-preset" data-harness-preset="load=streaming&symbols=0" href="?load=streaming&amp;symbols=0"
-              ><code>?load=streaming&amp;symbols=0</code></a
-            >
-            combine with <code>&amp;</code>
           </li>
         </ul>
       </section>

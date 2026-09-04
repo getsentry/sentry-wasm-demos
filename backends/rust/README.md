@@ -2,6 +2,8 @@
 
 Crash-only demo: `trigger_crash_divzero`, `trigger_crash_deep`, `ping`.
 
+No game loop (`step_game`). Main-thread and **worker** buttons call `trigger_crash_*` immediately — unlike Emscripten, which arms a flag and traps on the next `step_game`.
+
 `console_error_panic_hook` ([crates.io](https://crates.io/crates/console_error_panic_hook), wasm-bindgen ecosystem — not a Sentry crate) is installed on the first divzero or deep-stack call only (`ensure_panic_hook`). Without it, a Rust panic becomes a bare wasm trap (`RuntimeError: unreachable`) with no human-readable panic text on the JS side. The hook logs `panicked at '…', src/lib.rs:…` to `console.error`; the harness stores that in `wasm_crash.panic_message`. Stack file:line still comes from debug-file upload + symbolication, not from the hook.
 
 ## Build variants
