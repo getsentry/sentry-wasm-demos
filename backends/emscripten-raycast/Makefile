@@ -36,8 +36,7 @@ OUT_WASM_NO_SYMBOLS = $(OUT_DIR)/maze.nosym.wasm
 EXPORTED_FUNCTIONS = \
 	["_malloc","_free","_init_game","_handle_key","_step_game","_player_key_count",\
 	"_keys_required","_game_won","_get_level","_render_frame","_get_width","_get_height",\
-	"_get_pixel_buffer_ptr","_trigger_crash_divzero","_trigger_crash_deep",\
-	"_arm_crash_divzero","_arm_crash_deep"]
+	"_get_pixel_buffer_ptr","_arm_crash_divzero","_arm_crash_deep"]
 
 EMCC_FLAGS_COMMON = \
 	-O2 \

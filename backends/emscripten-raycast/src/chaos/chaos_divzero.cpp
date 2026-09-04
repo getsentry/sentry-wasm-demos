@@ -11,6 +11,6 @@ void divide_by_zero() {
 
 } // namespace
 
-extern "C" void trigger_crash_divzero() {
+void trigger_crash_divzero() {
     divide_by_zero();
 }

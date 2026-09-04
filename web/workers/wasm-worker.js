@@ -1,12 +1,25 @@
 import { registerWebWorkerWasm } from '@sentry/wasm';
 import { loadEmscriptenModule, loadWasmBindgenModule } from '../harness/loaders.js';
+import { runStepGame } from '../harness/step-game.js';
 
 // Main-thread wasmIntegration never patches this isolate — hook WebAssembly here
 // and post debug images to the page before any .wasm is instantiated.
 registerWebWorkerWasm({ self });
 
 /** @type {Record<string, () => void> | null} */
-let wasmExports = null;
+let rustExports = null;
+
+/** @type {object | null} */
+let emscriptenMod = null;
+
+/** @type {'caught' | 'uncaught'} */
+let crashMode = 'caught';
+
+/** @type {'divzero' | 'deep_stack' | null} */
+let pendingCrashType = null;
+
+let loopStarted = false;
+let lastTick = 0;
 
 /**
  * ENVIRONMENT=web Emscripten glue expects window/document. Dedicated workers only have self.
@@ -76,6 +89,59 @@ function emscriptenModuleConfig(wasmUrl) {
 }
 
 /**
+ * Minimal game loop so worker traps run in `_step_game` like the main thread.
+ * setInterval keeps ticking after a one-shot trap (C++ pending flag clears).
+ * @param {object} mod
+ */
+function startEmscriptenLoop(mod) {
+  if (loopStarted) {
+    return;
+  }
+  loopStarted = true;
+  lastTick = 0;
+
+  self.setInterval(() => {
+    const now = performance.now();
+    const dt = lastTick ? now - lastTick : 0;
+    lastTick = now;
+    runStepGame({
+      mod,
+      dt,
+      crashMode,
+      onCaught(err) {
+        const crashType = pendingCrashType;
+        if (!crashType) {
+          return;
+        }
+        pendingCrashType = null;
+        self.postMessage({
+          type: 'crash-result',
+          crashType,
+          error: serializeError(err),
+          panicLine: null,
+        });
+      },
+    });
+  }, 16);
+}
+
+self.addEventListener('error', event => {
+  if (crashMode !== 'uncaught' || !emscriptenMod) {
+    return;
+  }
+  const crashType = pendingCrashType;
+  if (!crashType) {
+    return;
+  }
+  pendingCrashType = null;
+  self.postMessage({
+    type: 'crash-escaped',
+    crashType,
+    error: serializeError(event.error ?? event.message),
+  });
+});
+
+/**
  * @param {object} data
  */
 async function initFromMessage(data) {
@@ -83,6 +149,7 @@ async function initFromMessage(data) {
   const wasmUrl = /** @type {string} */ (data.wasmUrl);
   const wasmLoad = /** @type {'streaming' | 'non-streaming' | 'default'} */ (data.wasmLoad ?? 'streaming');
   const loader = /** @type {'emscripten' | 'wasm-bindgen'} */ (data.loader);
+  crashMode = data.crashMode === 'uncaught' ? 'uncaught' : 'caught';
 
   if (loader === 'emscripten') {
     const glueGlobal = /** @type {string} */ (data.glueGlobal);
@@ -93,15 +160,17 @@ async function initFromMessage(data) {
       load: wasmLoad,
       moduleConfig: emscriptenModuleConfig(wasmUrl),
     });
-    const divzero = mod._trigger_crash_divzero;
-    const deep = mod._trigger_crash_deep;
-    if (typeof divzero !== 'function' || typeof deep !== 'function') {
-      throw new Error('Worker: Emscripten crash exports missing');
+    if (
+      typeof mod._arm_crash_divzero !== 'function' ||
+      typeof mod._arm_crash_deep !== 'function' ||
+      typeof mod._step_game !== 'function' ||
+      typeof mod._init_game !== 'function'
+    ) {
+      throw new Error('Worker: Emscripten arm/step_game exports missing — run make and rebuild JS');
     }
-    wasmExports = {
-      trigger_crash_divzero: divzero,
-      trigger_crash_deep: deep,
-    };
+    mod._init_game((Math.random() * 0x7fffffff) | 0, 1);
+    emscriptenMod = mod;
+    startEmscriptenLoop(mod);
     return wasmLoad;
   }
 
@@ -117,11 +186,55 @@ async function initFromMessage(data) {
   if (typeof glue.ping !== 'function' || glue.ping() !== 1) {
     throw new Error('Worker: ping failed');
   }
-  wasmExports = {
+  rustExports = {
     trigger_crash_divzero: glue.trigger_crash_divzero,
     trigger_crash_deep: glue.trigger_crash_deep,
   };
   return wasmLoad;
+}
+
+/**
+ * Rust has no game loop — still call trigger_crash_* immediately.
+ * @param {'trigger_crash_divzero' | 'trigger_crash_deep'} exportName
+ */
+function runRustCrash(exportName) {
+  const fn = rustExports?.[exportName];
+  if (typeof fn !== 'function') {
+    self.postMessage({
+      type: 'crash-result',
+      exportName,
+      error: { name: 'Error', message: `${exportName} not loaded in worker` },
+      panicLine: null,
+    });
+    return;
+  }
+
+  let panicLine = null;
+  const original = console.error;
+  console.error = (...args) => {
+    for (const arg of args) {
+      if (typeof arg === 'string' && arg.includes('panicked at') && panicLine === null) {
+        panicLine = arg.split(/\n\nStack:/)[0]?.trim() ?? arg;
+        original.apply(console, [panicLine]);
+        return;
+      }
+    }
+    original.apply(console, args);
+  };
+
+  try {
+    fn();
+    self.postMessage({ type: 'crash-result', exportName, error: null, panicLine });
+  } catch (err) {
+    self.postMessage({
+      type: 'crash-result',
+      exportName,
+      error: serializeError(err),
+      panicLine,
+    });
+  } finally {
+    console.error = original;
+  }
 }
 
 self.onmessage = async event => {
@@ -140,44 +253,28 @@ self.onmessage = async event => {
     return;
   }
 
-  if (data.type === 'crash') {
-    const exportName = /** @type {'trigger_crash_divzero' | 'trigger_crash_deep'} */ (data.exportName);
-    const fn = wasmExports?.[exportName];
-    if (typeof fn !== 'function') {
+  if (data.type === 'arm') {
+    const mod = emscriptenMod;
+    if (!mod) {
       self.postMessage({
         type: 'crash-result',
-        exportName,
-        error: { name: 'Error', message: `${exportName} not loaded in worker` },
+        crashType: 'divzero',
+        error: { name: 'Error', message: 'Emscripten module not loaded in worker' },
         panicLine: null,
       });
       return;
     }
 
-    let panicLine = null;
-    const original = console.error;
-    console.error = (...args) => {
-      for (const arg of args) {
-        if (typeof arg === 'string' && arg.includes('panicked at') && panicLine === null) {
-          panicLine = arg.split(/\n\nStack:/)[0]?.trim() ?? arg;
-          original.apply(console, [panicLine]);
-          return;
-        }
-      }
-      original.apply(console, args);
-    };
+    crashMode = data.crashMode === 'uncaught' ? 'uncaught' : 'caught';
+    const crash = data.crash === 'deep_stack' ? 'deep_stack' : 'divzero';
+    pendingCrashType = crash;
+    const fn = crash === 'deep_stack' ? mod._arm_crash_deep : mod._arm_crash_divzero;
+    fn();
+    return;
+  }
 
-    try {
-      fn();
-      self.postMessage({ type: 'crash-result', exportName, error: null, panicLine });
-    } catch (err) {
-      self.postMessage({
-        type: 'crash-result',
-        exportName,
-        error: serializeError(err),
-        panicLine,
-      });
-    } finally {
-      console.error = original;
-    }
+  if (data.type === 'crash') {
+    const exportName = /** @type {'trigger_crash_divzero' | 'trigger_crash_deep'} */ (data.exportName);
+    runRustCrash(exportName);
   }
 };

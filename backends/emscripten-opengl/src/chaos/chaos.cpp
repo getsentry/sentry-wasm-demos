@@ -8,7 +8,7 @@ PendingCrash pending_crash = None;
 
 } // namespace
 
-extern "C" void trigger_crash_deep() {
+void trigger_crash_deep() {
     chaos_deep5();
 }
 

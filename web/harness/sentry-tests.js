@@ -99,34 +99,37 @@ function wireJsTestErrorButton() {
 
 /**
  * @param {() => object} getModule
- * @param {{ crashMode?: 'caught' | 'uncaught' }} [options] `crashMode` arms C++ pending crash for emscripten loops
+ * @param {{ crashMode?: 'caught' | 'uncaught' }} [options] `crashMode` arms C++ pending crash (Emscripten). Omit for Rust (direct `trigger_crash_*`).
  */
 export function wireSentryTestButtons(getModule, options = {}) {
   wireJsTestErrorButton();
 
   const crashMode = options.crashMode;
-  const armInLoop = crashMode === 'caught' || crashMode === 'uncaught';
+  const help = document.querySelector('.sentry-help');
 
-  if (armInLoop) {
-    const help = document.querySelector('.sentry-help');
+  if (crashMode === 'caught' || crashMode === 'uncaught') {
     if (help) {
-      help.textContent = `WASM divzero/deep arm a flag; trap runs in step_game (capture=${crashMode}). Worker unchanged.`;
+      help.textContent = `WASM divzero/deep/worker arm a flag; trap runs in step_game (capture=${crashMode}).`;
     }
+
+    document.getElementById('trigger-wasm-divzero')?.addEventListener('click', () => {
+      armLoopCrash(getModule(), 'arm_crash_divzero', 'divzero', 'divzero', crashMode);
+    });
+    document.getElementById('trigger-wasm-deep')?.addEventListener('click', () => {
+      armLoopCrash(getModule(), 'arm_crash_deep', 'deep stack', 'deep_stack', crashMode);
+    });
+    return;
+  }
+
+  if (help) {
+    help.textContent =
+      'WASM divzero/deep call trigger_crash_* immediately. Worker is also direct-trigger (Rust has no game loop).';
   }
 
   document.getElementById('trigger-wasm-divzero')?.addEventListener('click', () => {
-    if (armInLoop) {
-      armLoopCrash(getModule(), 'arm_crash_divzero', 'divzero', 'divzero', crashMode);
-      return;
-    }
     callWasmCrash(getModule(), 'trigger_crash_divzero', 'WASM divzero', 'divzero');
   });
-
   document.getElementById('trigger-wasm-deep')?.addEventListener('click', () => {
-    if (armInLoop) {
-      armLoopCrash(getModule(), 'arm_crash_deep', 'deep stack', 'deep_stack', crashMode);
-      return;
-    }
     callWasmCrash(getModule(), 'trigger_crash_deep', 'WASM deep stack', 'deep_stack');
   });
 }

@@ -1,6 +1,7 @@
 import { captureHarnessException } from './sentry-context.js';
 import { sentryDsnSet } from '../sentry-init.js';
 import { wireHarnessPresets } from './presets.js';
+import { runStepGame } from './step-game.js';
 
 /** @type {import('./sentry-context.js').HarnessCrashType | null} */
 let pendingCrashType = null;
@@ -38,9 +39,8 @@ export function syncCrashQueryInUrl(crashMode) {
 }
 
 /**
- * Run `_step_game` either inside try/catch (caught) or let the trap escape (uncaught).
- * Caught errors do not reach window.onerror, so GlobalHandlers should not double-capture.
- * The game loop is not stopped after a trap — one-shot pending flags clear in C++ and play continues.
+ * Game-loop wrapper around {@link runStepGame}. The rAF loop is not stopped after a trap —
+ * the C++ pending flag is one-shot and play continues.
  *
  * @param {object} options
  * @param {() => object} options.getMod
@@ -51,27 +51,27 @@ export function createStepGameController({ getMod, crashMode }) {
    * @param {number} dt
    */
   function stepGame(dt) {
-    const mod = getMod();
-    if (crashMode === 'uncaught') {
-      mod._step_game(dt);
-      return;
-    }
-
-    try {
-      mod._step_game(dt);
-    } catch (err) {
-      const crashType = takePendingCrashType() ?? 'divzero';
-      console.error('[wasm crash]', err instanceof Error ? err.message : String(err));
-      captureHarnessException(err, crashType);
-      const feedback = document.getElementById('sentry-feedback');
-      const message = sentryDsnSet
-        ? `${crashType} in step_game — sent to Sentry (capture=caught). Game loop continues.`
-        : `${crashType} in step_game — no DSN in build. Game loop continues.`;
-      if (feedback) {
-        feedback.textContent = message;
-      }
-      console.log('[sentry test]', message);
-    }
+    runStepGame({
+      mod: getMod(),
+      dt,
+      crashMode,
+      onCaught(err) {
+        const crashType = takePendingCrashType();
+        if (!crashType) {
+          return;
+        }
+        console.error('[wasm crash]', err instanceof Error ? err.message : String(err));
+        captureHarnessException(err, crashType);
+        const feedback = document.getElementById('sentry-feedback');
+        const message = sentryDsnSet
+          ? `${crashType} in step_game — sent to Sentry (capture=caught). Game loop continues.`
+          : `${crashType} in step_game — no DSN in build. Game loop continues.`;
+        if (feedback) {
+          feedback.textContent = message;
+        }
+        console.log('[sentry test]', message);
+      },
+    });
   }
 
   return { stepGame };
