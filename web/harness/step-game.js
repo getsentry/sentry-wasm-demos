@@ -21,6 +21,7 @@ export function runStepGame({ mod, dt, crashMode, onCaught }) {
   try {
     mod._step_game(dt);
   } catch (err) {
+    console.error(err.stack);
     onCaught?.(err);
   }
 }
