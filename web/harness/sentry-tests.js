@@ -109,7 +109,7 @@ export function wireSentryTestButtons(getModule, options = {}) {
 
   if (crashMode === 'caught' || crashMode === 'uncaught') {
     if (help) {
-      help.textContent = `WASM divzero/deep/worker arm a flag; trap runs in step_game (capture=${crashMode}).`;
+      help.textContent = `WASM divzero/deep arm a flag; trap runs in step_game (capture=${crashMode}). Worker: ?worker_only=1.`;
     }
 
     document.getElementById('trigger-wasm-divzero')?.addEventListener('click', () => {

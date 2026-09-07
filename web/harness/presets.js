@@ -1,5 +1,5 @@
 /** Params merged into the current URL when clicking a preset (keeps backend/build). */
-const MERGE_PRESET_KEYS = new Set(['load', 'symbols', 'capture_mode']);
+const MERGE_PRESET_KEYS = new Set(['load', 'symbols', 'capture_mode', 'worker_only']);
 
 /**
  * @param {string} preset

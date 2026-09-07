@@ -148,7 +148,8 @@ Requires `make symbols` for default / `?symbols=1`, and `make no-symbols` for `?
 | `build`   | raycast `full`/`split`/`sourcemap`; rust `dev`/…; unity `full-stack`/`full-no-stack`/`explicit`/`none` | per backend | backend build |
 | `load`    | `streaming`, `non-streaming`, `default`           | `streaming`          | per `build` / `symbols`                  |
 | `symbols` | `1` / `0`                                         | `1`                  | `make no-symbols` for `?symbols=0` (N/A for Unity assets) |
-| `crash`   | `caught`, `uncaught` (emscripten-raycast / opengl) | `caught`             | C++ backends; divzero / deep / worker arm, trap runs in `_step_game` |
+| `worker_only` | `1` / `0`                                     | `0`                  | Emscripten / Rust — skips main-thread wasm load |
+| `crash`   | `caught`, `uncaught` (emscripten-raycast / opengl) | `caught`             | C++ backends; divzero / deep arm, trap runs in `_step_game` (worker: `?worker_only=1`) |
 
 
 Examples (use `&` between params, one value each — not `|`):
@@ -159,10 +160,13 @@ Examples (use `&` between params, one value each — not `|`):
 - [http://localhost:8080/web/?backend=emscripten-opengl](http://localhost:8080/web/?backend=emscripten-opengl)
 - [http://localhost:8080/web/?backend=rust](http://localhost:8080/web/?backend=rust)
 - [http://localhost:8080/web/?backend=unity](http://localhost:8080/web/?backend=unity)
+- [http://localhost:8080/web/?worker_only=1](http://localhost:8080/web/?worker_only=1) — wasm only in the worker (no maze on main thread)
 
 Invalid values (e.g. `?load=streaming|non-streaming|default`) fail fast with a red error under the canvas instead of loading silently.
 
-**`?crash=caught|uncaught`** (Emscripten C++ only): divzero / deep / **worker** buttons only **arm**. The trap runs at the start of the next `_step_game` (main rAF or the worker tick loop). `caught` (default) wraps that call in `try/catch` and sends via `captureHarnessException` (tags + fingerprint; worker tag stays `wasm.crash_type:worker`). `uncaught` has no try/catch — main thread uses GlobalHandlers; worker uses `webWorkerIntegration` (the page does **not** call `captureHarnessException`). Loops keep ticking after a one-shot trap (C++ pending flag clears). Rust worker still calls `trigger_crash_*` immediately (no game loop). Unity has no worker button.
+**`?worker_only=1`** (Emscripten / Rust): the main page never loads glue or `.wasm` — the **worker** button is shown only in this mode. Use it to test `registerWebWorkerWasm({ self })` without main-thread `wasmIntegration` registering the same module first (the default harness loads wasm on the page, so a worker button there only reused debug images from the main thread). Compare Sentry issues with those calls enabled vs commented out in `web/workers/wasm-worker.js`. Events are tagged `wasm.worker_only=yes`.
+
+**`?capture_mode=caught|uncaught`** (Emscripten C++ only): divzero / deep buttons **arm** a pending trap. The trap runs at the start of the next `_step_game` (main rAF or the worker tick loop in `?worker_only=1`). `caught` (default) wraps that call in `try/catch` and sends via `captureHarnessException`. `uncaught` has no try/catch — main thread uses GlobalHandlers; worker-only uncaught uses `webWorkerIntegration` (the page does **not** call `captureHarnessException`). Loops keep ticking after a one-shot trap (C++ pending flag clears). Rust worker still calls `trigger_crash_*` immediately (no game loop). Unity has no worker harness.
 
 ## Build variants (emscripten-raycast)
 

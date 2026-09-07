@@ -1,6 +1,7 @@
 /** @typedef {'emscripten-raycast' | 'emscripten-opengl' | 'rust' | 'unity'} BackendId */
 /** @typedef {'streaming' | 'non-streaming' | 'default'} LoadMode */
 /** @typedef {'caught' | 'uncaught'} CrashMode */
+/** @typedef {'0' | '1'} WorkerOnlyValue */
 /** @typedef {'full' | 'split' | 'sourcemap' | 'dev' | 'release-debug' | 'release-stripped' | 'full-stack' | 'full-no-stack' | 'explicit' | 'none'} BuildVariant */
 /** @typedef {'emscripten' | 'wasm-bindgen' | 'unity'} BackendLoader */
 /** @typedef {'cpp' | 'rust' | 'csharp'} BackendLanguage */
@@ -143,6 +144,7 @@ const BACKENDS = {
 const LOAD_MODES = /** @type {const} */ (['streaming', 'non-streaming', 'default']);
 const CRASH_MODES = /** @type {const} */ (['caught', 'uncaught']);
 const SYMBOLS_VALUES = /** @type {const} */ (['0', '1']);
+const WORKER_ONLY_VALUES = /** @type {const} */ (['0', '1']);
 
 function assertQuerySeparators(search) {
   const qCount = (search.match(/\?/g) || []).length;
@@ -247,6 +249,16 @@ export function getHarnessConfig() {
       return `Unknown capture mode ${JSON.stringify(value)}.\nTry ?capture_mode=caught or ?capture_mode=uncaught.`;
     }) || 'caught';
 
+  const workerOnlyRaw = parseEnumParam(
+    params.get('worker_only'),
+    WORKER_ONLY_VALUES,
+    'worker_only',
+    value => {
+      return `Invalid ?worker_only=${JSON.stringify(value)} — use 1 to skip main-thread wasm, or omit for default.`;
+    },
+  );
+  const workerOnly = workerOnlyRaw === '1';
+
   const isUnity = backend.id === 'unity';
 
   const assets = backend.resolveAssets(symbols, build);
@@ -259,6 +271,7 @@ export function getHarnessConfig() {
     loader: backend.loader,
     load,
     crashMode,
+    workerOnly,
     symbols: effectiveSymbols,
     build,
     glueGlobal: backend.glueGlobal,
@@ -290,6 +303,7 @@ export function formatHarnessBanner(config) {
   const symbolsPart =
     config.backendId === 'rust' ? '' : ` · symbols=${config.symbols ? 'on' : 'off'}`;
   const capturePart = config.loader === 'emscripten' ? ` · capture_mode=${config.crashMode}` : '';
-  return `${config.backendLabel} · ${config.language} · load=${config.load}${symbolsPart}${buildPart}${capturePart}`;
+  const workerOnlyPart = config.workerOnly ? ' · worker_only' : '';
+  return `${config.backendLabel} · ${config.language} · load=${config.load}${symbolsPart}${buildPart}${capturePart}${workerOnlyPart}`;
 }
 

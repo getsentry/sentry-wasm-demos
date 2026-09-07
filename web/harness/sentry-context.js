@@ -10,6 +10,7 @@ import { Sentry, sentryDsnSet } from '../sentry-init.js';
  * @property {'caught' | 'uncaught'} crashMode
  * @property {'full' | 'split' | 'sourcemap' | 'dev' | 'release-debug' | 'release-stripped' | 'full-stack' | 'full-no-stack' | 'explicit' | 'none' | null} build
  * @property {boolean} symbols
+ * @property {boolean} workerOnly
  * @property {string} wasmUrl
  * @property {string} glueScript
  * @property {string | null} debugUploadRel
@@ -36,6 +37,7 @@ export function applyHarnessContext(config) {
     'wasm.load': config.load,
     'wasm.capture_mode': config.crashMode,
     'wasm.symbols': config.symbols ? 'on' : 'off',
+    'wasm.worker_only': config.workerOnly ? 'yes' : 'no',
     ...(config.build ? { 'wasm.build': config.build } : {}),
   });
 
@@ -48,6 +50,7 @@ export function applyHarnessContext(config) {
     capture_mode: config.crashMode,
     build_variant: config.build,
     symbols: config.symbols,
+    worker_only: config.workerOnly,
     wasm_url: config.wasmUrl,
     glue_script: config.glueScript,
     debug_upload_rel: config.debugUploadRel,
@@ -91,6 +94,7 @@ export function captureHarnessException(err, crashType, options = {}) {
       load_mode: harnessConfig?.load ?? null,
       capture_mode: harnessConfig?.crashMode ?? null,
       symbols: harnessConfig?.symbols ?? null,
+      worker_only: harnessConfig?.workerOnly ?? null,
       debug_upload_rel: harnessConfig?.debugUploadRel ?? null,
       original_message: err instanceof Error ? err.message : String(err),
       original_type: err instanceof Error ? err.name : typeof err,

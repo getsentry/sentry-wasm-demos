@@ -4,6 +4,11 @@ import { getCreateModule, loadGlueScript } from './harness/loaders.js';
 import { wireHarnessPresets } from './harness/presets.js';
 import { applyHarnessContext } from './harness/sentry-context.js';
 import { setBackendBadge } from './harness/sentry-tests.js';
+import {
+  applyMainThreadHarnessUi,
+  assertWorkerOnlySupported,
+  applyWorkerOnlyUi,
+} from './harness/worker-only.js';
 import { wireWasmWorkerCrashTest } from './harness/worker-crash.js';
 
 wireHarnessPresets();
@@ -13,9 +18,14 @@ async function main() {
   applyHarnessContext(config);
   setBackendBadge(formatHarnessBanner(config));
 
-  if (config.loader !== 'unity') {
+  if (config.workerOnly) {
+    assertWorkerOnlySupported(config);
     wireWasmWorkerCrashTest(config);
+    applyWorkerOnlyUi(config);
+    return;
   }
+
+  applyMainThreadHarnessUi();
 
   const runnerModule = await config.startRunner();
   if (typeof runnerModule.start !== 'function') {

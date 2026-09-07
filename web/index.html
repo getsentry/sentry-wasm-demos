@@ -36,12 +36,12 @@
 
       <section class="sentry-panel" aria-labelledby="sentry-panel-title">
         <h2 id="sentry-panel-title">Sentry tests</h2>
-        <p class="sentry-help">js_test · divzero · deep_stack · worker (arm → step_game) · WebGL context lost (OpenGL only)</p>
+        <p class="sentry-help">js_test · divzero · deep_stack · WebGL context lost (OpenGL only) — worker crashes: <code>?worker_only=1</code></p>
         <div class="sentry-buttons">
           <button id="report-js-error" type="button">js_test</button>
           <button id="trigger-wasm-divzero" type="button">divzero</button>
           <button id="trigger-wasm-deep" type="button">deep_stack</button>
-          <button id="trigger-wasm-worker" type="button">worker</button>
+          <button id="trigger-wasm-worker" type="button" hidden disabled>worker</button>
           <button id="trigger-webgl-context-lost" type="button" hidden>WebGL context lost</button>
         </div>
         <p id="sentry-feedback" class="sentry-feedback" aria-live="polite"></p>
@@ -146,6 +146,16 @@
               href="?backend=unity&amp;build=explicit"
               ><code>?build=explicit</code></a
             >
+          </li>
+          <li>
+            Worker-only (no main-thread wasm):
+            <a
+              class="harness-preset"
+              data-harness-preset="worker_only=1"
+              href="?worker_only=1"
+              ><code>?worker_only=1</code></a
+            >
+            — wasm loads only in <code>wasm-worker.js</code> (Emscripten / Rust)
           </li>
           <li>
             Load (all backends):

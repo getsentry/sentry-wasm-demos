@@ -58,7 +58,7 @@ export async function start(config) {
 
   document.querySelector('.controls')?.classList.add('hidden');
   if (hud) {
-    hud.textContent = 'Rust wasm loaded — divzero / deep stack / worker via Sentry panel';
+    hud.textContent = 'Rust wasm loaded — divzero / deep stack via Sentry panel (worker: ?worker_only=1)';
   }
   if (status) {
     status.textContent = `Loaded ${config.wasmUrl.split('/').pop()} · ${config.load} · ${config.build ?? 'default'}`;
