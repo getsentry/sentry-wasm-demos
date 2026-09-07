@@ -24,12 +24,12 @@ export function peekPendingCrashType() {
 }
 
 /**
- * Put crash= in the URL without reloading so the mode is shareable.
+ * Put capture_mode= in the URL without reloading so the mode is shareable.
  * @param {'caught' | 'uncaught'} crashMode
  */
 export function syncCrashQueryInUrl(crashMode) {
   const url = new URL(window.location.href);
-  url.searchParams.set('crash', crashMode);
+  url.searchParams.set('capture_mode', crashMode);
   const next = `${url.pathname}${url.search}${url.hash}`;
   const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
   if (next !== current) {
@@ -64,7 +64,7 @@ export function createStepGameController({ getMod, crashMode }) {
         captureHarnessException(err, crashType);
         const feedback = document.getElementById('sentry-feedback');
         const message = sentryDsnSet
-          ? `${crashType} in step_game — sent to Sentry (capture=caught). Game loop continues.`
+          ? `${crashType} in step_game — sent to Sentry (capture_mode=caught). Game loop continues.`
           : `${crashType} in step_game — no DSN in build. Game loop continues.`;
         if (feedback) {
           feedback.textContent = message;

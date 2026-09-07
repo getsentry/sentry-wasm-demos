@@ -3,7 +3,14 @@
 Legend: ✅ works · ⚠️ partial · ❌ fails · ⬜ not measured yet · — not applicable
 
 Rows are one harness run each: backend + build + load + upload. Columns are what
-Sentry shows. Filter issues by tag `wasm.build`, `wasm.backend`, `wasm.crash_type`.
+Sentry shows. Filter issues by tag `wasm.build`, `wasm.backend`, `wasm.crash_type`,
+`wasm.capture_mode` (`caught` = `captureHarnessException` in the game loop;
+`uncaught` = `@sentry/browser` GlobalHandlers only).
+
+C++ divzero / deep / **worker** traps always run at the start of `step_game` (after
+the button **arms** a pending flag). Compare `?crash=caught` vs `?crash=uncaught`.
+Worker events keep tag `wasm.crash_type:worker` on the caught path. Rust worker
+still calls `trigger_crash_*` immediately (no `step_game`).
 
 ## Part 1 — build artifacts (measured locally, no Sentry needed)
 
@@ -35,7 +42,8 @@ Fill after uploading the matching debug file and triggering a fresh event.
 
 | Backend | Build | Load | Crash | Func | Line | Source | debug_id sent | Sym found | in images |
 | ------- | ----- | ---- | ----- | ---- | ---- | ------ | ------------- | --------- | --------- |
-| emscripten-raycast | split | streaming | divzero | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| emscripten-raycast | split | streaming | divzero `caught` | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| emscripten-raycast | split | streaming | divzero `uncaught` | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | emscripten-raycast | split | instantiate | divzero | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | emscripten-raycast | full | streaming | divzero | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | emscripten-raycast | sourcemap | streaming | divzero | ❌ | ❌ | ❌ | ✅ | ❌ notfound | ✅ |
@@ -59,6 +67,14 @@ Column meanings:
 - **debug_id sent** — event has `debug_meta.images[].debug_id` (SDK side)
 - **Sym found** — `debug_status: found`, i.e. Symbolicator matched an upload
 - **in images** — `debug_meta.images` present and frames carry `addr_mode`
+
+C++ **caught** events get `wasm.crash_type`, fingerprint, and `wasm_crash` context
+(issue title rewritten in `beforeSend`). Worker **caught** events use the same
+helpers with `wasm.crash_type:worker`. **Uncaught** events have session tags
+(`wasm.capture_mode=uncaught`, `wasm.backend`, …) but typically **no**
+`wasm.crash_type` / custom fingerprint — worker uncaught is
+`webWorkerIntegration` only (no `captureHarnessException`). Fill that comparison
+after a run.
 
 ## Part 3 — Unity WebGL `exceptionSupport`
 

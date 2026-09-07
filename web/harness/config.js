@@ -201,7 +201,7 @@ function resolveBuildVariant(backend, raw) {
 }
 
 /**
- * Harness options from URL query (?backend=&build=&load=&symbols=&crash=).
+ * Harness options from URL query (?backend=&build=&load=&symbols=&capture_mode=).
  */
 export function getHarnessConfig() {
   assertQuerySeparators(window.location.search);
@@ -240,11 +240,11 @@ export function getHarnessConfig() {
 
   /** @type {CrashMode} */
   const crashMode =
-    parseEnumParam(params.get('crash'), CRASH_MODES, 'crash', value => {
+    parseEnumParam(params.get('capture_mode'), CRASH_MODES, 'capture_mode', value => {
       if (value.includes('|') || value.includes(',')) {
-        return `Invalid ?crash=${JSON.stringify(value)} — pick one: caught or uncaught.`;
+        return `Invalid ?capture_mode=${JSON.stringify(value)} — pick one: caught or uncaught.`;
       }
-      return `Unknown crash mode ${JSON.stringify(value)}.\nTry ?crash=caught or ?crash=uncaught.`;
+      return `Unknown capture mode ${JSON.stringify(value)}.\nTry ?capture_mode=caught or ?capture_mode=uncaught.`;
     }) || 'caught';
 
   const isUnity = backend.id === 'unity';
@@ -289,6 +289,7 @@ export function formatHarnessBanner(config) {
   const buildPart = config.build ? ` · build=${config.build}` : '';
   const symbolsPart =
     config.backendId === 'rust' ? '' : ` · symbols=${config.symbols ? 'on' : 'off'}`;
-  const capturePart = config.loader === 'emscripten' ? ` · capture=${config.crashMode}` : '';
+  const capturePart = config.loader === 'emscripten' ? ` · capture_mode=${config.crashMode}` : '';
   return `${config.backendLabel} · ${config.language} · load=${config.load}${symbolsPart}${buildPart}${capturePart}`;
 }
+

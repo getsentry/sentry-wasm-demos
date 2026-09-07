@@ -25,13 +25,27 @@ web/
 
 ## Build & run
 
-For **all harness URL paths** (`?symbols=0`, `?load=…`, default), build **both** variants:
+**Local play** (maze + crash buttons, console stacks only — no Sentry Issues):
 
 ```bash
 source /path/to/emsdk/emsdk_env.sh
 make clean && make && cd web && npm install && npm run build:js && cd ..
 python3 -m http.server 8080
 ```
+
+**Sentry Issues** — set `SENTRY_DSN` **before** `npm run build:js` (the DSN is injected into `app.js` at build time; change it → rebuild JS):
+
+```bash
+source /path/to/emsdk/emsdk_env.sh
+make clean && make
+export SENTRY_DSN="https://<key>@<org>.ingest.sentry.io/<project>"
+cd web && npm install && npm run build:js && cd ..
+python3 -m http.server 8080
+```
+
+Or put `SENTRY_DSN=…` in `web/.env` (see [Sentry config](#sentry-config)) instead of `export`. No debug-file upload required to **see** issues — upload is only for symbolicated C++ names in the stack trace.
+
+For **all harness URL paths** (`?symbols=0`, `?load=…`, default), also build **both** wasm variants when you use those query flags — see tables below (`make symbols`, `make no-symbols`).
 
 `make` builds three coverage-matrix variants for **emscripten-raycast** (same C++ crash buttons):
 

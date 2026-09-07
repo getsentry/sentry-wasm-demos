@@ -36,12 +36,12 @@
 
       <section class="sentry-panel" aria-labelledby="sentry-panel-title">
         <h2 id="sentry-panel-title">Sentry tests</h2>
-        <p class="sentry-help">JS error · wasm divzero / deep / worker (arm → step_game) · WebGL context lost (OpenGL only)</p>
+        <p class="sentry-help">js_test · divzero · deep_stack · worker (arm → step_game) · WebGL context lost (OpenGL only)</p>
         <div class="sentry-buttons">
-          <button id="report-js-error" type="button">Report test error</button>
-          <button id="trigger-wasm-divzero" type="button">WASM divzero</button>
-          <button id="trigger-wasm-deep" type="button">WASM deep crash</button>
-          <button id="trigger-wasm-worker" type="button">WASM worker crash</button>
+          <button id="report-js-error" type="button">js_test</button>
+          <button id="trigger-wasm-divzero" type="button">divzero</button>
+          <button id="trigger-wasm-deep" type="button">deep_stack</button>
+          <button id="trigger-wasm-worker" type="button">worker</button>
           <button id="trigger-webgl-context-lost" type="button" hidden>WebGL context lost</button>
         </div>
         <p id="sentry-feedback" class="sentry-feedback" aria-live="polite"></p>
@@ -87,9 +87,13 @@
           </li>
           <li>
             C++ crash capture (raycast / opengl):
-            <a class="harness-preset" data-harness-preset="crash=caught" href="?crash=caught"><code>?crash=caught</code></a>
+            <a class="harness-preset" data-harness-preset="capture_mode=caught" href="?capture_mode=caught"
+              ><code>?capture_mode=caught</code></a
+            >
             (default — <code>Sentry.captureException</code>) ·
-            <a class="harness-preset" data-harness-preset="crash=uncaught" href="?crash=uncaught"><code>?crash=uncaught</code></a>
+            <a class="harness-preset" data-harness-preset="capture_mode=uncaught" href="?capture_mode=uncaught"
+              ><code>?capture_mode=uncaught</code></a
+            >
             (GlobalHandlers only)
           </li>
           <li>
