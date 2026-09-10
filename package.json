@@ -1,0 +1,10 @@
+{
+  "name": "sentry-wasm-emscripten",
+  "private": true,
+  "scripts": {
+    "build:js": "node web/build-js.mjs",
+    "prepare:wasm": "node scripts/sentry/prepare-wasm.mjs",
+    "upload:sourcemaps": "node scripts/sentry/upload-sourcemaps.mjs",
+    "watch:js": "node web/build-js.mjs --watch"
+  }
+}

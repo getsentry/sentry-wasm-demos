@@ -19,6 +19,8 @@ web/
   backends/             per-backend JS runners
   assets/               built .js / .wasm per backend
   index.html            shared shell + Sentry panel
+scripts/
+  sentry/               local getsentry/cli wrappers (prepare, sourcemap upload)
 ```
 
 
@@ -357,3 +359,21 @@ Re-run step **2** and step **3** after any Rust change.
 Release-debug with symbolication: `?backend=rust&build=release-debug` (`make rust-release-debug && make rust-release-debug-symbols`, upload `demo_release.debug.wasm`).
 
 Release-stripped negative control (`debuginfo=0` only): `?backend=rust&build=release-stripped` (`make rust-no-symbols`, no upload).
+
+## Local `sentry` CLI — `debug-files prepare` (WIP)
+
+> **TBD** — needs [getsentry/cli](https://github.com/getsentry/cli) branch with `debug-files prepare` merged. Wrappers: `scripts/sentry/`. Set `SENTRY_CLI_ROOT` in `web/.env` if needed. Until then use `sentry-cli debug-files upload` from the Makefiles.
+
+From repo root (`web/.env` filled in, local cli at `code/cli/cli`, `pnpm install` done there):
+
+```bash
+source ~/dev/emsdk/emsdk_env.sh
+cd /path/to/sentry-wasm-emscripten
+make clean && make && make symbols && make no-symbols
+cd web && npm install && cd ..
+npm run build:js
+npm run prepare:wasm -- assets
+npm run upload:sourcemaps
+python3 -m http.server 8080
+# → http://localhost:8080/web/
+```

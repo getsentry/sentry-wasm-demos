@@ -1,7 +1,7 @@
 import { build } from 'esbuild';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import { env, sentryRelease } from './env.mjs';
+import { env, sentryRelease } from '../scripts/sentry/env.mjs';
 
 const root = dirname(fileURLToPath(import.meta.url));
 

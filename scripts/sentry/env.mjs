@@ -1,12 +1,11 @@
-import { existsSync, readFileSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { webRoot } from './paths.mjs';
 
-const root = dirname(fileURLToPath(import.meta.url));
+const envPath = join(webRoot, '.env');
 
 /** @param {string} key */
 function readEnvFile(key) {
-  const envPath = join(root, '.env');
   if (!existsSync(envPath)) {
     return '';
   }
@@ -25,7 +24,7 @@ function readEnvFile(key) {
   return '';
 }
 
-/** @param {string} key @param {string} fallback */
+/** @param {string} key @param {string} [fallback] */
 export function env(key, fallback = '') {
   return process.env[key]?.trim() || readEnvFile(key) || fallback;
 }
