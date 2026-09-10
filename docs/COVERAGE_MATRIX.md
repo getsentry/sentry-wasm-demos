@@ -23,6 +23,7 @@ what Sentry needs", before any upload is involved.
 | emscripten `maze.split.wasm` (browser) | ⬜ | ⬜ | ⬜ |
 | emscripten `maze.split.debug.wasm` (upload) | ⬜ | ⬜ | ⬜ |
 | emscripten `maze.sourcemap.wasm` | ⬜ | ❌ (source map instead) | ❌ |
+| emscripten `maze.symtab.wasm` (`make symtab`) | ⬜ | ❌ (`name` only) | ❌ |
 | rust `demo_bg.wasm` (browser, after split) | ✅ | ❌ stripped | ❌ |
 | rust `demo.debug.wasm` (upload) | ✅ | ✅ 6 sections | ✅ |
 | rust `demo_release_bg.wasm` (browser, after split) | ✅ | ❌ stripped | ❌ |

@@ -56,8 +56,9 @@ For **all harness URL paths** (`?symbols=0`, `?load=…`, default), also build *
 | `full` | `make full` | `maze.full.wasm` (DWARF inside) | same file |
 | `split` (default) | `make split` | `maze.split.wasm` (stripped) | `maze.split.debug.wasm` (`-gseparate-dwarf` at link) |
 | `sourcemap` | `make sourcemap` | `maze.sourcemap.wasm` | TBD — `-O2 -gsource-map` |
+| `symtab` | `make symtab` | `maze.symtab.wasm` | none — `prepare` symtab warning test (`--profiling-funcs`, no `-g`) |
 
-Events are tagged `wasm.build=full|split|sourcemap` for matrix filtering.
+Events are tagged `wasm.build=full|split|sourcemap|symtab` for matrix filtering.
 
 
 | Build target            | Artifacts                                 | Used when                                    |

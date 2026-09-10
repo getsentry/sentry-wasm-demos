@@ -17,7 +17,7 @@ SRC = $(SRC_DIR)/main.cpp $(SRC_DIR)/maze.cpp $(SRC_DIR)/raycast.cpp $(SRC_DIR)/
 
 OBJS = $(addprefix $(OBJ_DIR)/,$(notdir $(SRC:.cpp=.o)))
 
-# Coverage-matrix variants (?build=full|split|sourcemap on emscripten-raycast)
+# Coverage-matrix variants (?build=full|split|sourcemap|symtab on emscripten-raycast)
 OUT_FULL_JS = $(OUT_DIR)/maze.full.js
 OUT_FULL_WASM = $(OUT_DIR)/maze.full.wasm
 OUT_SPLIT_JS = $(OUT_DIR)/maze.split.js
@@ -25,6 +25,8 @@ OUT_SPLIT_WASM = $(OUT_DIR)/maze.split.wasm
 OUT_SPLIT_DEBUG_WASM = $(OUT_DIR)/maze.split.debug.wasm
 OUT_SOURCEMAP_JS = $(OUT_DIR)/maze.sourcemap.js
 OUT_SOURCEMAP_WASM = $(OUT_DIR)/maze.sourcemap.wasm
+OUT_SYMTAB_JS = $(OUT_DIR)/maze.symtab.js
+OUT_SYMTAB_WASM = $(OUT_DIR)/maze.symtab.wasm
 
 # Legacy wasm-split path (optional comparison — not used by default harness)
 OUT_JS = $(OUT_DIR)/maze.js
@@ -52,13 +54,15 @@ EMCC_FLAGS_COMMON = \
 
 EMCC_FLAGS_DWARF = -g $(EMCC_FLAGS_COMMON)
 EMCC_FLAGS_SOURCEMAP = -gsource-map $(EMCC_FLAGS_COMMON)
+# Name section only (function names, no DWARF) — for prepare symtab / CLI warning tests.
+EMCC_FLAGS_SYMTAB = --profiling-funcs $(EMCC_FLAGS_COMMON)
 EMCC_FLAGS_NO_SYMBOLS = $(EMCC_FLAGS_COMMON)
 EMCC_COMPILE_FLAGS = \
 	-O2 \
 	-fno-optimize-sibling-calls \
 	-std=c++17
 
-.PHONY: all full split sourcemap no-symbols symbols clean legacy
+.PHONY: all full split sourcemap symtab no-symbols symbols clean legacy
 
 all: full split sourcemap no-symbols legacy
 
@@ -102,6 +106,17 @@ $(OUT_SOURCEMAP_JS): $(SRC) | $(OUT_DIR)
 	@echo "Upload:  try sentry-cli debug-files upload -t wasm $(OUT_SOURCEMAP_WASM) (map may not symbolicate in Sentry)"
 	@echo ""
 
+# ?build=symtab — wasm name section only (no DWARF); prepare skips with symtab warning
+symtab: $(OUT_SYMTAB_JS)
+
+$(OUT_SYMTAB_JS): $(SRC) | $(OUT_DIR)
+	$(EMCC) $(EMCC_FLAGS_SYMTAB) $(SRC) -o $(OUT_SYMTAB_JS)
+	@echo ""
+	@echo "Symtab only: $(OUT_SYMTAB_JS) + $(OUT_SYMTAB_WASM)"
+	@echo "Harness: ?backend=emscripten-raycast&build=symtab"
+	@echo "Prepare: npm run prepare:wasm -- emscripten-raycast/maze.symtab.wasm --dry-run --no-upload"
+	@echo ""
+
 # Symlink legacy names to split build for older docs/scripts
 legacy: split
 	cp $(OUT_SPLIT_JS) $(OUT_JS)
@@ -142,5 +157,6 @@ clean:
 	rm -f $(OUT_DIR)/maze.full.js $(OUT_DIR)/maze.full.wasm \
 		$(OUT_DIR)/maze.split.js $(OUT_DIR)/maze.split.wasm $(OUT_DIR)/maze.split.debug.wasm \
 		$(OUT_DIR)/maze.sourcemap.js $(OUT_DIR)/maze.sourcemap.wasm $(OUT_DIR)/maze.sourcemap.wasm.map \
+		$(OUT_DIR)/maze.symtab.js $(OUT_DIR)/maze.symtab.wasm \
 		$(OUT_DIR)/maze.js $(OUT_DIR)/maze.wasm $(OUT_DIR)/maze.debug.wasm \
 		$(OUT_DIR)/maze.nosym.js $(OUT_DIR)/maze.nosym.wasm

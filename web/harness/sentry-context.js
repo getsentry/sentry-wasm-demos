@@ -8,7 +8,7 @@ import { Sentry, sentryDsnSet } from '../sentry-init.js';
  * @property {string} loader
  * @property {'streaming' | 'non-streaming' | 'default'} load
  * @property {'caught' | 'uncaught'} crashMode
- * @property {'full' | 'split' | 'sourcemap' | 'dev' | 'release-debug' | 'release-stripped' | 'full-stack' | 'full-no-stack' | 'explicit' | 'none' | null} build
+ * @property {'full' | 'split' | 'sourcemap' | 'symtab' | 'dev' | 'release-debug' | 'release-stripped' | 'full-stack' | 'full-no-stack' | 'explicit' | 'none' | null} build
  * @property {boolean} symbols
  * @property {boolean} workerOnly
  * @property {string} wasmUrl

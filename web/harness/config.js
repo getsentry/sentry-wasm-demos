@@ -2,7 +2,7 @@
 /** @typedef {'streaming' | 'non-streaming' | 'default'} LoadMode */
 /** @typedef {'caught' | 'uncaught'} CrashMode */
 /** @typedef {'0' | '1'} WorkerOnlyValue */
-/** @typedef {'full' | 'split' | 'sourcemap' | 'dev' | 'release-debug' | 'release-stripped' | 'full-stack' | 'full-no-stack' | 'explicit' | 'none'} BuildVariant */
+/** @typedef {'full' | 'split' | 'sourcemap' | 'symtab' | 'dev' | 'release-debug' | 'release-stripped' | 'full-stack' | 'full-no-stack' | 'explicit' | 'none'} BuildVariant */
 /** @typedef {'emscripten' | 'wasm-bindgen' | 'unity'} BackendLoader */
 /** @typedef {'cpp' | 'rust' | 'csharp'} BackendLanguage */
 
@@ -38,7 +38,7 @@ const BACKENDS = {
     assetDir: 'assets/emscripten-raycast',
     glueGlobal: 'createMazeModule',
     loader: 'emscripten',
-    buildVariants: ['split', 'full', 'sourcemap'],
+    buildVariants: ['split', 'full', 'sourcemap', 'symtab'],
     resolveAssets(symbols, build) {
       if (!symbols) {
         return {
@@ -48,14 +48,23 @@ const BACKENDS = {
         };
       }
 
-      const variant =
-        build === 'full' ? 'maze.full' : build === 'sourcemap' ? 'maze.sourcemap' : 'maze.split';
+      /** @type {Record<string, string>} */
+      const variantByBuild = {
+        full: 'maze.full',
+        sourcemap: 'maze.sourcemap',
+        symtab: 'maze.symtab',
+        split: 'maze.split',
+      };
+      const resolvedBuild = build || 'split';
+      const variant = variantByBuild[resolvedBuild] ?? 'maze.split';
       const debugUploadRel =
-        build === 'full'
+        resolvedBuild === 'full'
           ? `${this.assetDir}/maze.full.wasm`
-          : build === 'sourcemap'
+          : resolvedBuild === 'sourcemap'
             ? `${this.assetDir}/maze.sourcemap.wasm`
-            : `${this.assetDir}/maze.split.debug.wasm`;
+            : resolvedBuild === 'symtab'
+              ? null
+              : `${this.assetDir}/maze.split.debug.wasm`;
 
       return {
         glueScript: `${this.assetDir}/${variant}.js`,

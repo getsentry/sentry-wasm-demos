@@ -1,5 +1,5 @@
 .PHONY: all no-symbols symbols clean emscripten-raycast emscripten-opengl rust rust-release-debug rust-symbols \
-	rust-release-debug-symbols rust-no-symbols js-sourcemaps full split sourcemap unity unity-one
+	rust-release-debug-symbols rust-no-symbols js-sourcemaps full split sourcemap symtab unity unity-one
 
 all emscripten-raycast:
 	$(MAKE) -C backends/emscripten-raycast all
@@ -12,6 +12,9 @@ split:
 
 sourcemap:
 	$(MAKE) -C backends/emscripten-raycast sourcemap
+
+symtab:
+	$(MAKE) -C backends/emscripten-raycast symtab
 
 emscripten-opengl:
 	$(MAKE) -C backends/emscripten-opengl all
