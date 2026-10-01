@@ -8,6 +8,3 @@ export const repoRoot = join(scriptDir, '../..');
 
 /** Web harness root (`web/`). */
 export const webRoot = join(repoRoot, 'web');
-
-/** Default local getsentry/cli checkout (`code/cli/cli`). */
-export const defaultCliRoot = join(repoRoot, '../../../cli/cli');

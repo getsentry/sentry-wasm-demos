@@ -6,7 +6,7 @@ import { runStepGame } from '../harness/step-game.js';
 // Main-thread wasmIntegration never patches this isolate — hook WebAssembly here
 // and post debug images to the page before any .wasm is instantiated.
 registerWebWorkerWasm({ self });
-// registerWebWorker({ self }); 
+registerWebWorker({ self });
 
 /** @type {Record<string, () => void> | null} */
 let rustExports = null;

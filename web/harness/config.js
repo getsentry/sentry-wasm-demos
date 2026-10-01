@@ -132,9 +132,10 @@ const BACKENDS = {
     assetDir: 'assets/unity',
     glueGlobal: null,
     loader: 'unity',
-    buildVariants: ['none', 'full-stack', 'full-no-stack', 'explicit'],
+    // Default first: only `full-stack` is shipped from `make unity` until you build other slugs.
+    buildVariants: ['full-stack', 'full-no-stack', 'explicit', 'none'],
     resolveAssets(_symbols, build) {
-      const slug = build || 'none';
+      const slug = build || 'full-stack';
       const dir = `${this.assetDir}/${slug}`;
       const base = `${dir}/Build/${slug}`;
       return {

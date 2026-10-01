@@ -23,11 +23,10 @@ for (const key of ['SENTRY_AUTH_TOKEN', 'SENTRY_ORG', 'SENTRY_PROJECT']) {
   }
 }
 
-// Absolute path — runSentry cwd is packages/cli, so "." would scan the wrong tree.
 console.log(`[upload] dir=${webRoot} release=${sentryRelease} url-prefix=${sentryUrlPrefix}`);
 
 runSentry(
-  `sourcemap upload "${webRoot}" --release "${sentryRelease}" --url-prefix "${sentryUrlPrefix}" ` +
+  `sourcemaps upload "${webRoot}" --release "${sentryRelease}" --url-prefix "${sentryUrlPrefix}" ` +
     `--ignore "assets/**,harness/**,backends/**,workers/**"`,
 );
 

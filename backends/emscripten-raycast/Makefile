@@ -114,7 +114,7 @@ $(OUT_SYMTAB_JS): $(SRC) | $(OUT_DIR)
 	@echo ""
 	@echo "Symtab only: $(OUT_SYMTAB_JS) + $(OUT_SYMTAB_WASM)"
 	@echo "Harness: ?backend=emscripten-raycast&build=symtab"
-	@echo "Prepare: npm run prepare:wasm -- emscripten-raycast/maze.symtab.wasm --dry-run --no-upload"
+	@echo "Upload:  (symtab only — no DWARF debug file)"
 	@echo ""
 
 # Symlink legacy names to split build for older docs/scripts

@@ -28,6 +28,7 @@ web/maze.v*.wasm
 web/maze.debug.wasm
 
 # Web bundle + secrets
+node_modules/
 web/node_modules/
 web/app.js
 web/app.js.map
@@ -36,7 +37,12 @@ web/rust-wasm-worker.js.map
 web/wasm-worker.js
 web/wasm-worker.js.map
 web/.env
+
+# Lockfiles stay local — resolved URLs depend on your npm registry config
+package-lock.json
 web/package-lock.json
+yarn.lock
+web/yarn.lock
 
 # Native build scratch
 *.o

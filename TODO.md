@@ -1,0 +1,1 @@
+- [ ] Add CI workflow: build Emscripten + wasm-pack outputs, upload debug wasm under `web/assets/`

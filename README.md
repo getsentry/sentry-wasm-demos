@@ -20,10 +20,29 @@ web/
   assets/               built .js / .wasm per backend
   index.html            shared shell + Sentry panel
 scripts/
-  sentry/               local getsentry/cli wrappers (prepare, sourcemap upload)
+  sentry/               debug wasm + JS sourcemap upload helpers
 ```
 
 
+
+## Prerequisites
+
+| Tool | Needed for | Install |
+| ---- | ---------- | ------- |
+| Node 20+ / npm | JS bundle, `sentry-cli` uploads | [nodejs.org](https://nodejs.org) |
+| [emsdk](https://emscripten.org/docs/getting_started/downloads.html) | `emscripten-raycast`, `emscripten-opengl` | `source /path/to/emsdk/emsdk_env.sh` per shell |
+| Rust + `wasm-pack` | `?backend=rust` | [rustup.rs](https://rustup.rs), then `cargo install wasm-pack` |
+| `wasm-split` | Rust `*-symbols` targets | `cargo install wasm-split --git https://github.com/getsentry/symbolicator.git wasm-split` |
+| Unity editor | `?backend=unity` | see [backends/unity/README.md](backends/unity/README.md) |
+
+Everything Sentry-side comes from released npm packages: `@sentry/browser` + `@sentry/wasm` in
+[web/package.json](web/package.json), and `@sentry/cli` in the repo-root [package.json](package.json).
+No local SDK or CLI checkout required.
+
+```bash
+npm install          # sentry-cli (upload scripts)
+cd web && npm install && cd ..   # @sentry/browser, @sentry/wasm, esbuild
+```
 
 ## Build & run
 
@@ -51,12 +70,14 @@ For **all harness URL paths** (`?symbols=0`, `?load=…`, default), also build *
 
 `make` builds three coverage-matrix variants for **emscripten-raycast** (same C++ crash buttons):
 
-| `?build=` | Makefile target | Browser wasm | Upload to Sentry |
-|-----------|-----------------|--------------|------------------|
-| `full` | `make full` | `maze.full.wasm` (DWARF inside) | same file |
-| `split` (default) | `make split` | `maze.split.wasm` (stripped) | `maze.split.debug.wasm` (`-gseparate-dwarf` at link) |
-| `sourcemap` | `make sourcemap` | `maze.sourcemap.wasm` | TBD — `-O2 -gsource-map` |
-| `symtab` | `make symtab` | `maze.symtab.wasm` | none — `prepare` symtab warning test (`--profiling-funcs`, no `-g`) |
+
+| `?build=`         | Makefile target  | Browser wasm                    | Upload to Sentry                                                    |
+| ----------------- | ---------------- | ------------------------------- | ------------------------------------------------------------------- |
+| `full`            | `make full`      | `maze.full.wasm` (DWARF inside) | same file                                                           |
+| `split` (default) | `make split`     | `maze.split.wasm` (stripped)    | `maze.split.debug.wasm` (`-gseparate-dwarf` at link)                |
+| `sourcemap`       | `make sourcemap` | `maze.sourcemap.wasm`           | TBD — `-O2 -gsource-map`                                            |
+| `symtab`          | `make symtab`    | `maze.symtab.wasm`              | none — symtab-only negative control (`--profiling-funcs`, no `-g`)  |
+
 
 Events are tagged `wasm.build=full|split|sourcemap|symtab` for matrix filtering.
 
@@ -100,7 +121,7 @@ make clean && make && make symbols && make no-symbols
 
 `make symbols` runs `wasm-split --strip`, which moves DWARF from `maze.wasm` into `maze.debug.wasm`. Re-running split on an already-stripped wasm produces a useless debug file — `make clean` forces a fresh `-g` build first. Healthy sizes: `maze.wasm` ~26 KB, `maze.debug.wasm` ~184 KB.
 
-`make no-symbols` compiles with `-g` then **links without** `-g`, so emcc strips DWARF from `maze.nosym.wasm` (`?symbols=0`). `make clean` deletes both `maze.`* and `maze.nosym.*` — always re-run **both** targets after clean.
+`make no-symbols` compiles with `-g` then **links without** `-g`, so emcc strips DWARF from `maze.nosym.wasm` (`?symbols=0`). `make clean` deletes both `maze.`* and `maze.nosym.`* — always re-run **both** targets after clean.
 
 **Step 3.** Upload debug wasm to Sentry (skip for local-only play)
 
@@ -145,14 +166,14 @@ Re-run step **2** and step **3** after any C++ change (`debug_id` changes per bu
 Requires `make symbols` for default / `?symbols=1`, and `make no-symbols` for `?symbols=0`. See [Build & run](#build--run).
 
 
-| Param     | Values                                            | Default              | Needs                                    |
-| --------- | ------------------------------------------------- | -------------------- | ---------------------------------------- |
-| `backend` | `emscripten-raycast`, `emscripten-opengl`, `rust`, `unity` | `emscripten-raycast` | backend build |
-| `build`   | raycast `full`/`split`/`sourcemap`; rust `dev`/…; unity `full-stack`/`full-no-stack`/`explicit`/`none` | per backend | backend build |
-| `load`    | `streaming`, `non-streaming`, `default`           | `streaming`          | per `build` / `symbols`                  |
-| `symbols` | `1` / `0`                                         | `1`                  | `make no-symbols` for `?symbols=0` (N/A for Unity assets) |
-| `worker_only` | `1` / `0`                                     | `0`                  | Emscripten / Rust — skips main-thread wasm load |
-| `crash`   | `caught`, `uncaught` (emscripten-raycast / opengl) | `caught`             | C++ backends; divzero / deep arm, trap runs in `_step_game` (worker: `?worker_only=1`) |
+| Param         | Values                                                                                                 | Default              | Needs                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------------------------ | -------------------- | -------------------------------------------------------------------------------------- |
+| `backend`     | `emscripten-raycast`, `emscripten-opengl`, `rust`, `unity`                                             | `emscripten-raycast` | backend build                                                                          |
+| `build`       | raycast `full`/`split`/`sourcemap`; rust `dev`/…; unity `full-stack`/`full-no-stack`/`explicit`/`none` | per backend          | backend build                                                                          |
+| `load`        | `streaming`, `non-streaming`, `default`                                                                | `streaming`          | per `build` / `symbols`                                                                |
+| `symbols`     | `1` / `0`                                                                                              | `1`                  | `make no-symbols` for `?symbols=0` (N/A for Unity assets)                              |
+| `worker_only` | `1` / `0`                                                                                              | `0`                  | Emscripten / Rust — skips main-thread wasm load                                        |
+| `crash`       | `caught`, `uncaught` (emscripten-raycast / opengl)                                                     | `caught`             | C++ backends; divzero / deep arm, trap runs in `_step_game` (worker: `?worker_only=1`) |
 
 
 Examples (use `&` between params, one value each — not `|`):
@@ -167,9 +188,9 @@ Examples (use `&` between params, one value each — not `|`):
 
 Invalid values (e.g. `?load=streaming|non-streaming|default`) fail fast with a red error under the canvas instead of loading silently.
 
-**`?worker_only=1`** (Emscripten / Rust): the main page never loads glue or `.wasm` — the **worker** button is shown only in this mode. Use it to test `registerWebWorkerWasm({ self })` without main-thread `wasmIntegration` registering the same module first (the default harness loads wasm on the page, so a worker button there only reused debug images from the main thread). Compare Sentry issues with those calls enabled vs commented out in `web/workers/wasm-worker.js`. Events are tagged `wasm.worker_only=yes`.
+`?worker_only=1` (Emscripten / Rust): the main page never loads glue or `.wasm` — the **worker** button is shown only in this mode. Use it to test `registerWebWorkerWasm({ self })` without main-thread `wasmIntegration` registering the same module first (the default harness loads wasm on the page, so a worker button there only reused debug images from the main thread). Compare Sentry issues with those calls enabled vs commented out in `web/workers/wasm-worker.js`. Events are tagged `wasm.worker_only=yes`.
 
-**`?capture_mode=caught|uncaught`** (Emscripten C++ only): divzero / deep buttons **arm** a pending trap. The trap runs at the start of the next `_step_game` (main rAF or the worker tick loop in `?worker_only=1`). `caught` (default) wraps that call in `try/catch` and sends via `captureHarnessException`. `uncaught` has no try/catch — main thread uses GlobalHandlers; worker-only uncaught uses `webWorkerIntegration` (the page does **not** call `captureHarnessException`). Loops keep ticking after a one-shot trap (C++ pending flag clears). Rust worker still calls `trigger_crash_*` immediately (no game loop). Unity has no worker harness.
+`?capture_mode=caught|uncaught` (Emscripten C++ only): divzero / deep buttons **arm** a pending trap. The trap runs at the start of the next `_step_game` (main rAF or the worker tick loop in `?worker_only=1`). `caught` (default) wraps that call in `try/catch` and sends via `captureHarnessException`. `uncaught` has no try/catch — main thread uses GlobalHandlers; worker-only uncaught uses `webWorkerIntegration` (the page does **not** call `captureHarnessException`). Loops keep ticking after a one-shot trap (C++ pending flag clears). Rust worker still calls `trigger_crash_*` immediately (no game loop). Unity has no worker harness.
 
 ## Build variants (emscripten-raycast)
 
@@ -180,10 +201,10 @@ make clean && make && make symbols && make no-symbols
 ```
 
 
-| Target                  | Output                                    | `-g` | Harness / Sentry                                                                             |
-| ----------------------- | ----------------------------------------- | ---- | -------------------------------------------------------------------------------------------- |
-| `make` + `make symbols` | `maze.js`, `maze.wasm`, `maze.debug.wasm` | yes  | Default `/web/`, all `?load=` modes with `symbols=1`; upload debug wasm for Sentry file:line |
-| `make no-symbols`       | `maze.nosym.js`, `maze.nosym.wasm`        | compile only | `?symbols=0` — objects have DWARF, link strips it; wasm offsets in console and Sentry |
+| Target                  | Output                                    | `-g`         | Harness / Sentry                                                                             |
+| ----------------------- | ----------------------------------------- | ------------ | -------------------------------------------------------------------------------------------- |
+| `make` + `make symbols` | `maze.js`, `maze.wasm`, `maze.debug.wasm` | yes          | Default `/web/`, all `?load=` modes with `symbols=1`; upload debug wasm for Sentry file:line |
+| `make no-symbols`       | `maze.nosym.js`, `maze.nosym.wasm`        | compile only | `?symbols=0` — objects have DWARF, link strips it; wasm offsets in console and Sentry        |
 
 
 C++ flags: `-g`, `-O2`, `-Wl,--build-id`, `-fno-optimize-sibling-calls`. `no-symbols` uses `-g` only at compile (`-c`), not at link.
@@ -234,10 +255,8 @@ Use default URL `/web/` with badge `symbols=on` · `load=streaming` for symbolic
 
 **Unity** (`backends/unity/`): IL2CPP WebGL player, captured by `@sentry/browser` +
 `@sentry/wasm` like the other backends (no `io.sentry.unity`). Build with `make unity`,
-open [http://localhost:8080/web/?backend=unity](http://localhost:8080/web/?backend=unity).
+open [http://localhost:8080/web/?backend=unity&build=full-stack](http://localhost:8080/web/?backend=unity&build=full-stack) (or `?backend=unity` — defaults to `full-stack`).
 Coverage: [docs/COVERAGE_MATRIX.md](docs/COVERAGE_MATRIX.md) Part 2–3.
-
-
 
 ## Controls
 
@@ -249,7 +268,7 @@ WASD or arrows. Collect all keys, exit bottom-right.
 
 ```bash
 make clean && make && make symbols && make no-symbols
-cd web && npm run build:js && npm run upload:sourcemaps && cd ..
+cd web && npm run build:js && cd .. && npm run upload:sourcemaps
 python3 -m http.server 8080
 ```
 
@@ -261,7 +280,7 @@ python3 -m http.server 8080
 make clean && make && make symbols && make no-symbols
 set -a && source web/.env && set +a
 sentry-cli debug-files upload -t wasm web/assets/emscripten-raycast/maze.debug.wasm
-cd web && npm run build:js && npm run upload:sourcemaps && cd ..
+cd web && npm run build:js && cd .. && npm run upload:sourcemaps
 python3 -m http.server 8080
 ```
 
@@ -270,7 +289,7 @@ python3 -m http.server 8080
 **Only changed JS / harness / HTML / CSS**
 
 ```bash
-cd web && npm run build:js && npm run upload:sourcemaps && cd ..
+cd web && npm run build:js && cd .. && npm run upload:sourcemaps
 ```
 
 → hard-refresh · no `make`, no upload
@@ -281,7 +300,7 @@ cd web && npm run build:js && npm run upload:sourcemaps && cd ..
 make clean && make && make symbols && make no-symbols
 set -a && source web/.env && set +a
 sentry-cli debug-files upload -t wasm web/assets/emscripten-raycast/maze.debug.wasm
-cd web && npm run build:js && npm run upload:sourcemaps && cd ..
+cd web && npm run build:js && cd .. && npm run upload:sourcemaps
 ```
 
 → re-upload required (`debug_id` changes every wasm build)
@@ -292,7 +311,7 @@ cd web && npm run build:js && npm run upload:sourcemaps && cd ..
 make -C backends/rust clean && make rust && make rust-symbols && make rust-no-symbols
 set -a && source web/.env && set +a
 sentry-cli debug-files upload -t wasm --include-sources web/assets/rust/demo.debug.wasm
-cd web && npm run build:js && npm run upload:sourcemaps && cd ..
+cd web && npm run build:js && cd .. && npm run upload:sourcemaps
 ```
 
 → open `?backend=rust` · re-upload required (`debug_id` changes every wasm build)
@@ -337,15 +356,11 @@ sentry-cli debug-files upload -t wasm --include-sources web/assets/rust/demo.deb
 **Step 4.** Bundle JS and upload source maps (for harness frames in `sentry-tests.js`, etc.)
 
 ```bash
-cd web
-npm install
-npm run build:js
+cd web && npm install && npm run build:js && cd ..
 npm run upload:sourcemaps
-cd ..
 ```
 
 JS stacks use `SENTRY_RELEASE` + `SENTRY_URL_PREFIX` from `web/.env` (default `http://localhost:8080/web/`). Re-run after every `build:js`. Wasm frames still need step 3.
-```
 
 **Step 5.** Serve
 
@@ -361,20 +376,15 @@ Release-debug with symbolication: `?backend=rust&build=release-debug` (`make rus
 
 Release-stripped negative control (`debuginfo=0` only): `?backend=rust&build=release-stripped` (`make rust-no-symbols`, no upload).
 
-## Local `sentry` CLI — `debug-files prepare` (WIP)
-
-> **TBD** — needs [getsentry/cli](https://github.com/getsentry/cli) branch with `debug-files prepare` merged. Wrappers: `scripts/sentry/`. Set `SENTRY_CLI_ROOT` in `web/.env` if needed. Until then use `sentry-cli debug-files upload` from the Makefiles.
-
-From repo root (`web/.env` filled in, local cli at `code/cli/cli`, `pnpm install` done there):
+## All harness backends (raycast + WebGL + rust)
 
 ```bash
 source ~/dev/emsdk/emsdk_env.sh
 cd /path/to/sentry-wasm-emscripten
-make clean && make && make symbols && make no-symbols
-cd web && npm install && cd ..
-npm run build:js
-npm run prepare:wasm -- assets
-npm run upload:sourcemaps
+make harness
+npm run upload:debug-wasm    # needs web/.env Sentry auth
 python3 -m http.server 8080
-# → http://localhost:8080/web/
 ```
+
+Open [http://localhost:8080/web/](http://localhost:8080/web/).
+

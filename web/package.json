@@ -4,16 +4,11 @@
   "type": "module",
   "scripts": {
     "build:js": "node build-js.mjs",
-    "upload:sourcemaps": "node upload-sourcemaps.mjs",
     "watch:js": "node build-js.mjs --watch"
   },
   "dependencies": {
-    "@sentry/browser": "10.67.0",
-    "@sentry/wasm": "file:../../../../sdks/sentry-javascript/packages/wasm"
-  },
-  "overrides": {
-    "@sentry/browser": "10.67.0",
-    "@sentry/core": "10.67.0"
+    "@sentry/browser": "11.2.0",
+    "@sentry/wasm": "11.2.0"
   },
   "devDependencies": {
     "esbuild": "^0.25.0"

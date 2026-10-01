@@ -1,4 +1,4 @@
-.PHONY: all no-symbols symbols clean emscripten-raycast emscripten-opengl rust rust-release-debug rust-symbols \
+.PHONY: all no-symbols symbols clean harness emscripten-raycast emscripten-opengl rust rust-release-debug rust-symbols \
 	rust-release-debug-symbols rust-no-symbols js-sourcemaps full split sourcemap symtab unity unity-one
 
 all emscripten-raycast:
@@ -45,11 +45,20 @@ unity-one:
 	$(MAKE) -C backends/unity unity-one MODE=$(or $(MODE),full-stack)
 
 js-sourcemaps:
-	cd web && npm run build:js && npm run upload:sourcemaps
+	cd web && npm run build:js
+	npm run upload:sourcemaps
 
 symbols:
 	$(MAKE) -C backends/emscripten-raycast symbols
 	$(MAKE) -C backends/emscripten-opengl symbols
+
+# Default harness backends (raycast + WebGL + rust) + bundled JS
+harness:
+	$(MAKE) -C backends/emscripten-raycast all symbols no-symbols
+	$(MAKE) -C backends/emscripten-opengl all symbols no-symbols
+	$(MAKE) -C backends/rust dev release-debug no-symbols symbols release-debug-symbols
+	npm install
+	cd web && npm install && npm run build:js
 
 clean:
 	$(MAKE) -C backends/emscripten-raycast clean

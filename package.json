@@ -3,8 +3,11 @@
   "private": true,
   "scripts": {
     "build:js": "node web/build-js.mjs",
-    "prepare:wasm": "node scripts/sentry/prepare-wasm.mjs",
+    "upload:debug-wasm": "node scripts/sentry/upload-debug-wasm.mjs",
     "upload:sourcemaps": "node scripts/sentry/upload-sourcemaps.mjs",
     "watch:js": "node web/build-js.mjs --watch"
+  },
+  "devDependencies": {
+    "@sentry/cli": "^3.8.0"
   }
 }
